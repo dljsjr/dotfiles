@@ -1,0 +1,49 @@
+.cache/
+.cargo/
+.config/fish/fish_variables
+.config/fish/fisher
+Brewfile
+darwin/
+.config/fish/functions
+.config/fish/completions
+.CFUserTextEncoding
+.DS_STORE
+.Trash
+.DS_Store
+.config/chezmoi
+.lesshst
+.rustup
+.viminfo
+.vscode
+**/.mise.local.toml
+README.md
+
+.local/share/mise
+.local/share/atuin
+.local/share/fish
+.local/state
+{{ range $binFile := glob (joinPath .chezmoi.homeDir ".local" "bin" "**" "*") -}}
+{{- with $mime := output "file" "-b" "-L" "--mime" $binFile -}}
+{{- if or (contains "executable" $mime) (contains "=binary" $mime) }}
+{{ trimPrefix (printf "%s/" $.chezmoi.homeDir) $binFile }}
+{{- end }}
+{{- end -}}
+{{- end }}
+{{ range $terminfo := glob (joinPath .chezmoi.homeDir ".terminfo" "**" "*") -}}
+{{- if and (eq (lstat $terminfo).type "symlink") (eq (stat $terminfo).type "dir") }}
+{{ trimPrefix (printf "%s/" $.chezmoi.homeDir) $terminfo }}
+{{ trimPrefix (printf "%s/" $.chezmoi.homeDir) $terminfo }}/**/*
+{{- end }}
+{{- end }}
+
+{{ if ne .chezmoi.os "darwin" -}}
+.hammerspoon
+{{ end -}}
+
+{{ if eq .chezmoi.os "darwin" -}}
+.hammerspoon/.editorconfig
+.hammerspoon/.luarc.json
+.haammerspoon/Spoons
+{{ end -}}
+
+

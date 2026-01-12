@@ -1,0 +1,5 @@
+*_id_*
+*.pub
+controlmasters/*
+known_hosts.old
+*podman*

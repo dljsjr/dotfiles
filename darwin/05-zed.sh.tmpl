@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+{{ if eq .chezmoi.os "darwin" -}}
+APP_NAME='Zed'
+CF_BUNDLE_ID='dev.zed.Zed'
+{{ if eq .chezmoi.arch "amd64" -}}
+DOWNLOAD_URL="$(curl -sL -H "Accept: application/vnd.github+json" https://api.github.com/repos/zed-industries/zed/releases/latest | sed -n -e 's/^.*"browser_download_url":[^"]*"\(.*x86_64\.dmg\).*$/\1/p')"
+{{ else -}}
+DOWNLOAD_URL="$(curl -sL -H "Accept: application/vnd.github+json" https://api.github.com/repos/zed-industries/zed/releases/latest | sed -n -e 's/^.*"browser_download_url":[^"]*"\(.*aarch64\.dmg\).*$/\1/p')"
+{{ end -}}
+{{ includeTemplate "install_app_from_dmg" $ -}}
+{{ end -}}

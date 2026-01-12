@@ -1,0 +1,62 @@
+"$schema" = "https://jj-vcs.github.io/jj/latest/config-schema.json"
+
+[user]
+name = "Doug Stephen"
+email = "dljs.jr@dougstephenjr.com"
+
+[aliases]
+delta = [
+  "util",
+  "exec",
+  "--",
+  "jj",
+  "--config",
+  "ui.pager=delta",
+  "--config",
+  "ui.diff.format=git",
+]
+difft = ["util", "exec", "--", "jj", "--config", "ui.diff.tool=difft"]
+
+[fsmonitor]
+backend = "watchman"
+
+[fsmonitor.watchman]
+register-snapshot-trigger = true
+
+[git]
+colocate = true
+push = "origin"
+private-commits = "description(regex:'^wip[:]?.*') | description(regex:'^private[:]?.*') | description(regex:'^(?:mega)?merge[:]?.*')"
+
+[merge-tools.hunk]
+program = "nvim"
+edit-args = ["-c", "DiffEditor $left $right $output"]
+
+[revset-aliases]
+"immutable_heads()" = "builtin_immutable_heads() | bookmarks(glob:\"release*/*\") | bookmarks(regex:\"(?:trunk|main|develop|beta|production)@origin\")"
+"parent_bookmark(to)" = "heads(::to & bookmarks())"
+"parent_bookmark()" = "parent_bookmark(@)"
+"bookmark_children()" = "parent_bookmark()..@"
+
+
+[signing]
+behavior = "own"
+backend = "ssh"
+key = "~/.ssh/id_ed25519.pub"
+
+[ui]
+pager = "delta"
+show-cryptographic-signatures = true
+
+[templates]
+draft_commit_description = '''
+concat(
+  coalesce(description, "\n"),
+  surround(
+    "\nJJ: This commit contains the following changes:\n", "",
+    indent("JJ:     ", diff.summary()),
+  ),
+  "\nJJ: ignore-rest\n",
+  diff.git(),
+)
+'''

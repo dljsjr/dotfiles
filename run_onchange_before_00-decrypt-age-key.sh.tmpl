@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+{{ $confDir := dir .chezmoi.configFile -}}
+{{ $identityFile := joinPath $confDir "age_id_dotfiles" -}}
+{{ if (stat $identityFile) -}}
+# key file hash: {{ include $identityFile | sha256sum }}
+# key file mtime: {{ (stat $identityFile).modTime }}
+{{ else -}}
+# no key file
+# last check time: {{ now | unixEpoch }}
+{{ end -}}
+if [ ! -f "{{ $identityFile }}" ]
+then
+    mkdir -p "{{ $confDir }}"
+    chezmoi age decrypt --output "{{ $identityFile }}" --passphrase <(op read {{ .ageSecretKeyPath }} | base64 -d)
+    chmod 600 "{{ $identityFile }}"
+fi

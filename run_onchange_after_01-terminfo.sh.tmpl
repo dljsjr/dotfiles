@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+printf "updating terminfo symlinks\n"
+{{ $terminfoRoot :=  joinPath .chezmoi.homeDir ".terminfo" }}
+{{ $terminfoFiles := joinPath $terminfoRoot "**" "*" -}}
+{{ range $terminfo := glob $terminfoFiles -}}
+{{ if eq (lstat $terminfo).type "dir" -}}
+## dir: {{ $terminfo }}, last modified: {{ (lstat $terminfo).modTime }}
+{{ end -}}
+{{ if eq (lstat $terminfo).type "file" -}}
+## {{ $terminfo }} hash: {{ include $terminfo | sha256sum }}, last modified: {{ (lstat $terminfo).modTime }}
+{{ end -}}
+{{ end -}}
+find {{ $terminfoRoot }} -print0 | while IFS= read -r -d '' maybeDir
+do
+    if [ -L "$maybeDir" ] && [ ! -e "$maybeDir" ]
+    then
+        printf "pruning broken symlink [%s]\n" "$maybeDir"
+        rm "$maybeDir"
+    fi
+    if [ ! -L "$maybeDir" ] && [ -d "$maybeDir" ]
+    then
+        case "$maybeDir" in
+            {{ $terminfoRoot }}/[[:lower:]])
+                CHAR="$(basename "$maybeDir")"
+                HEX="$(printf "%x" "'$CHAR")"
+                SYMLINK="{{ joinPath .chezmoi.homeDir ".terminfo" }}/$HEX"
+                if [ ! -L "$SYMLINK" ] && [ ! -e "$SYMLINK" ]
+                then
+                    printf "creating terminfo symlink from %s to %s\n" "$CHAR" "$HEX"
+                    ln -s "$maybeDir" "$SYMLINK"
+                fi
+                ;;
+        esac
+    fi
+done

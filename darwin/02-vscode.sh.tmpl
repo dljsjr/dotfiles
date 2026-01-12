@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+{{ if eq .chezmoi.os "darwin" -}}
+APP_NAME='Visual Studio Code'
+CF_BUNDLE_ID='com.microsoft.VSCode'
+{{ if eq .chezmoi.arch "amd64" -}}
+DOWNLOAD_URL="https://code.visualstudio.com/sha/download?build=stable&os=darwin"
+{{ else -}}
+DOWNLOAD_URL="https://code.visualstudio.com/sha/download?build=stable&os=darwin-{{- .chezmoi.arch -}}"
+{{ end -}}
+{{ includeTemplate "install_app_from_zip" $ -}}
+{{ end -}}

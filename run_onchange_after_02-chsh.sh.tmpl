@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+{{- $currentShell := "" }}
+{{ if eq .chezmoi.os "darwin" -}}
+{{- $currentShell = (output "dscl" "." "-read" .chezmoi.homeDir "UserShell" | trimPrefix "UserShell: " | trim) }}
+{{- else -}}
+{{- $currentShell = (output "getent" "passwd" .chezmoi.username | splitList ":" | last | trim) }}
+{{- end -}}
+# shell: {{ $currentShell }}
+
+if command -v fish >/dev/null 2>&1 && ! echo "{{ $currentShell }}" | grep -q "/fish$"
+then
+    mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}"/fish/functions
+    mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}"/fish/completions
+    if ! grep -q '^'"$(command -v fish)"'$' /etc/shells
+    then
+        command -v fish | sudo tee -a /etc/shells > /dev/null >&2
+    fi
+    chsh -s "$(command -v fish)"
+fi

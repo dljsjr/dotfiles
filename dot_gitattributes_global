@@ -1,0 +1,17 @@
+*.rs   diff=rust
+*.lua  diff=lua
+*.py   diff=python
+*.css  diff=css
+*.go   diff=golang
+*.html diff=html
+*.java diff=java
+*.kt   diff=kotlin
+*.kts  diff=kotlin
+*.md   diff=markdown
+*.c    diff=cpp
+*.h    diff=cpp
+*.cpp  diff=cpp
+*.hpp  diff=cpp
+*.rb   diff=ruby
+*.dts  diff=dts
+*.dtsi diff=dts

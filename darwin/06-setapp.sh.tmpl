@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+{{ if eq .chezmoi.os "darwin" -}}
+APP_NAME='Setapp'
+CF_BUNDLE_ID='com.setapp.DesktopClient'
+DOWNLOAD_URL="https://store.setapp.com/installers/v1/InstallSetapp.zip"
+INSTALL_TYPE="installer-app"
+{{ includeTemplate "install_app_from_zip" $ -}}
+{{ end -}}

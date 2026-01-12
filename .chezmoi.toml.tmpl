@@ -1,0 +1,12 @@
+{{- $ageSecretKeyPath := promptStringOnce . "ageSecretKeyPath" "age identify 1pass path" -}}
+{{- $agePublicKeyPath := promptStringOnce . "agePublicKeyPath" "age public 1pass path" -}}
+sourceDir = "{{ .chezmoi.sourceDir }}"
+encryption = "age"
+
+[data]
+    ageSecretKeyPath = {{ $ageSecretKeyPath | quote }}
+    agePublicKeyPath = {{ $agePublicKeyPath | quote }}
+
+[age]
+    identity = "~/.config/chezmoi/age_id_dotfiles"
+    recipient = {{ $agePublicKeyPath | onepasswordRead | quote }}

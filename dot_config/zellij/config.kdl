@@ -1,0 +1,100 @@
+theme "kanagawa-custom"
+default_shell "fish"
+mouse_mode true
+copy_on_select true
+session_serialization true
+pane_viewport_serialization true
+scrollback_lines_to_serialize 0
+
+plugins {
+    autolock location="https://github.com/fresh2dev/zellij-autolock/releases/latest/download/zellij-autolock.wasm" {
+        is_enabled true
+        triggers "nvim|vim|git|fzf|zoxide|atuin"
+        reaction_seconds "0.3"
+        print_to_log true
+    }
+}
+
+load_plugins {
+    autolock
+}
+
+keybinds {
+    normal {
+        unbind "Ctrl g"
+        bind "Ctrl b" { SwitchToMode "Tmux"; }
+        bind "Enter" {
+            WriteChars "\u{000D}";
+            MessagePlugin "autolock" {};
+        }
+    }
+    locked {
+        unbind "Ctrl g"
+        bind "Ctrl b" { SwitchToMode "Tmux"; }
+        bind "Alt z" {
+            MessagePlugin "autolock" {payload "disable";};
+            SwitchToMode "Normal";
+        }
+    }
+    shared {
+        unbind "Ctrl g"
+        bind "Alt Shift z" {
+            MessagePlugin "autolock" { payload "enable";};
+        }
+    }
+    pane {
+      bind "Alt h" {
+        MovePane "Left"
+      }
+
+      bind "Alt l" {
+        MovePane "Right"
+      }
+
+      bind "Alt j" {
+        MovePane "Down"
+      }
+
+      bind "Alt k" {
+        MovePane "Up"
+      }
+    }
+    shared_except "locked" {
+        bind "Alt z" {
+            MessagePlugin "autolock" {payload "disable";};
+            SwitchToMode "Locked";
+        }
+
+        bind "Ctrl h" {
+            MoveFocusOrTab "Left";
+        }
+        bind "Ctrl l" {
+            MoveFocusOrTab "Right";
+        }
+        bind "Ctrl j" {
+            MoveFocus "Down";
+        }
+        bind "Ctrl k" {
+            MoveFocus "Up";
+        }
+    }
+    tmux {
+      bind "Ctrl b" { Write 2; SwitchToMode "Normal"; }
+      bind "Esc" { SwitchToMode "Normal"; }
+      bind "g" { SwitchToMode "Locked"; }
+      bind "p" { SwitchToMode "Pane"; }
+      bind "t" { SwitchToMode "Tab"; }
+      bind "n" { SwitchToMode "Resize"; }
+      bind "h" { SwitchToMode "Move"; }
+      bind "s" { SwitchToMode "Scroll"; }
+      bind "o" { SwitchToMode "Session"; }
+      bind "q" { Quit; }
+    }
+}
+
+ui {
+  pane_frames {
+    hide_session_name true
+     rounded_corners true
+  }
+}

@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+{{ $brewfile := joinPath .chezmoi.sourceDir "Brewfile" -}}
+{{ if (stat $brewfile) -}}
+# brewfile hash: {{ include $brewfile | sha256sum }}
+# brewfile mtime: {{ (stat $brewfile).modTime }}
+{{ if lookPath "brew" -}}
+# check status: {{ exec "brew" "bundle" "check" "--file" $brewfile }}
+{{ end -}}
+{{ else -}}
+# no brewfile
+# last check time: {{ now | unixEpoch }}
+{{ end -}}
+if [ -f "{{ $brewfile }}" ] && command -v brew >/dev/null 2>&1 && ! brew bundle check >/dev/null 2>&1 --file "{{ $brewfile }}"
+then
+    brew bundle install --file "{{ $brewfile }}"
+fi

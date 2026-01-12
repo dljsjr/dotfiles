@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+{{ if eq .chezmoi.os "darwin" -}}
+APP_NAME='Ghostty'
+CF_BUNDLE_ID='*.ghostty'
+DOWNLOAD_URL="$(curl -sL https://ghostty.org/download | sed -e 's|^.*\(https://release\.files.*Ghostty.dmg\).*$|\1|g')"
+{{ includeTemplate "install_app_from_dmg" $ -}}
+{{ end -}}

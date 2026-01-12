@@ -1,0 +1,44 @@
+# Set the following ENV Vars at the top op the script file before inlining the template:
+# APP_NAME: (Optional) for printing
+# CF_BUNDLE_ID: The app bundle identifier
+# DOWNLOAD_URL: URL to download the app from
+# INSTALL_TYPE: Default 'bundle', can be 'installer-app', 'bundle' or 'pkg', tells the script how to install whatever is in the .dmg
+INSTALL_TYPE="${INSTALL_TYPE:-bundle}"
+APP_BUNDLE="$(mdfind "kMDItemCFBundleIdentifier = '$CF_BUNDLE_ID'")"
+if [ -n  "$APP_BUNDLE" ]
+then
+    printf -- "%s: already installed, skipping\n" "${APP_NAME:-$APP_BUNDLE}"
+else
+    DLDIR="$(mktemp -d)"
+    if ! [ -d "$DLDIR" ]
+    then
+        printf -- "Failed to create temporary download directory!\n" >&2
+        exit 1
+    fi
+
+    cd "$DLDIR" || exit 1
+
+    printf "downloading %s\n" "${APP_NAME:-''} dmg"
+    curl -LO "$DOWNLOAD_URL"
+    printf "mounting dmg\n"
+    VOLUME_MOUNT="$(hdiutil attach -nobrowse "$(find . -name '*.dmg' | head -n 1)" | tail -n1 | cut -f3-)"
+
+    trap 'hdiutil detach -force -quiet "$VOLUME_MOUNT"' EXIT
+    if [ "$INSTALL_TYPE" = "bundle" ]
+    then
+        printf "copying .app bundle\n"
+        cp -a "$(find "$VOLUME_MOUNT" -name '*.app' | head -n 1)" /Applications/
+    elif [ "$INSTALL_TYPE" = "installer-app" ]
+    then
+        printf "running installer .app \n"
+        open -W "$(find . -name '*.app' | head -n 1)"
+    elif [ "$INSTALL_TYPE" = "pkg" ]
+    then
+        printf "running pkg installer\n"
+        cp -a "$(find "$VOLUME_MOUNT" -name '*.pkg' | head -n 1)" /Applications/
+    else
+        printf "unkown install type: %s\n" "$INSTALL_TYPE" >&2
+    fi
+    printf "detaching dmg\n"
+    hdiutil detach -force -quiet "$VOLUME_MOUNT"
+fi

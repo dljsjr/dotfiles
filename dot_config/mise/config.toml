@@ -1,0 +1,14 @@
+[tools]
+slsa-verifier = "latest"
+cosign = "latest"
+rust = "latest"
+
+[settings]
+experimental = true
+idiomatic_version_file_enable_tools = ["rust", "python", "node", "java"]
+
+[settings.pipx]
+uvx = true
+
+[settings.python]
+uv_venv_auto = true

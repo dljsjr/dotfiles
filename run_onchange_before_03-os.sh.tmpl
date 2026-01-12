@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+
+{{ range $confFile := glob (joinPath .chezmoi.sourceDir .chezmoi.os "*") -}}
+tmpfile="$(mktemp)"
+cat<<'EOF' > "$tmpfile"
+{{ includeTemplate $confFile $ }}
+EOF
+
+. "$tmpfile"
+
+{{ end -}}

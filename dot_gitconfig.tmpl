@@ -1,0 +1,163 @@
+[user]
+    name = Doug Stephen
+    email = dljs.jr@dougstephenjr.com
+    signingkey = ~/.ssh/id_ed25519.pub
+
+[gpg]
+    format = ssh
+{{- if eq .chezmoi.os "darwin" }}
+
+[gpg "ssh"]
+  program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
+{{- end }}
+
+[commit]
+    verbose = true
+    gpgsign = true
+
+[absorb]
+    maxStack = 50
+    autoStageIfNothingStaged = true
+
+[pull]
+    rebase = true
+
+[diff]
+  ignoreSubmodules = dirty
+
+[rebase]
+    updateRefs = true
+    autosquash = true
+    autostash = true
+
+[core]
+    attributesFile = ~/.gitattributes_global
+    excludesfile = ~/.gitignore_global
+    editor = nvim
+    autocrlf = input
+    untrackedCache = true
+    pager = delta
+    fsmonitor = true
+    logAllRefUpdates = true
+    sparseCheckout = false
+    commitgraph = true
+
+[branch]
+    sort = -committerdate
+
+[alias]
+    clean-branches = prune-branches -f
+    lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+    clog = log --cherry-pick --no-merges --pretty=format:'%C(auto)%h %C(blue)%ad %Creset%<(50,trunc)%s%C(green) %aN%C(auto)%d%C(reset)'
+    pristine = clean -fxxdii -e '.jj' -e '**/.jj' -e '.vscode' -e '**/.vscode' -e 'mise.toml' -e 'mise.local.toml' -e '.mise.toml' -e '.mise.local.toml'
+    fix-submods = "!f() { git submodule sync --recursive; git submodule update --init --recursive --force; git submodule foreach --recursive git clean -ffxdi -e '.jj' -e '**/.jj' -e '.vscode' -e '**/.vscode'; }; f"
+    revert-index = "!f() { git update-index --no-split-index --no-skip-worktree --index-version 2; git submodule foreach --recursive git update-index --no-split-index --no-skip-worktree --index-version 2; }; f"
+    refcent = "!f() { : git reflog show ; git --no-pager reflog show --date=local --oneline \"${@:--n 20}\"; }; f"
+    recent = "!f() { : git log ; git --no-pager log --date=local --oneline \"${@:--n 20}\"; }; f"
+    current = rev-parse --abbrev-ref HEAD
+    log-to = "!f() { \
+                        CURRENT_BRANCH=$(git current); \
+                        git --no-pager log ${1}..$CURRENT_BRANCH --boundary --oneline; \
+                }; f"
+    source-hash = "!f() { \
+                             CURRENT_BRANCH=$(git current); \
+                             git rev-list ${1}..$CURRENT_BRANCH --boundary | tail -n 1 | cut -c2- ;\
+                }; f"
+    prep-rebase = "!f() { : git rebase ; git rebase -i --autosquash ${1}; }; f"
+    info = "!f() { git status; git clog \"${@:--n 20}\"; }; f"
+    deets = "!f() { : git diff ; git -c color.ui=always status && git diff --color ${@}; }; f"
+    absorb = absorb -f
+    sls = smartlog 'stack()'
+    sld = smartlog 'draft()'
+[fetch]
+    fsckObjects = true
+    writeCommitGraph = true
+
+[transfer]
+  fsckobjects = true
+
+[receive]
+    fsckobjects = true
+
+[push]
+    default = simple
+    autoSetupRemote = true
+
+[filter "lfs"]
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    required = true
+    process = git-lfs filter-process
+
+[init]
+    defaultBranch = main
+
+[index]
+    sparse = false
+
+[delta]
+    features = decorations
+    navigate = true
+    line-numbers = true
+    side-by-side = true
+    hyperlinks = true
+    hyperlinks-file-link-format = "vscode://file/{path}:{line}"
+    relative-paths = true
+
+[delta "interactive"]
+    keep-plus-minus-markers = false
+
+[delta "decorations"]
+    commit-decoration-style = blue ol
+    commit-style = raw
+    file-style = omit
+    hunk-header-decoration-style = blue box
+    hunk-header-file-style = red
+    hunk-header-line-number-style = "#067a00"
+    hunk-header-style = file line-number syntax
+
+[merge]
+    conflictstyle = zdiff3
+
+[diff]
+    algorithm = histogram
+    colorMoved = default
+    mnemonicPrefix = true
+
+[interactive]
+    diffFilter = delta --color-only --features=interactive
+
+[add.interactive]
+    useBuiltin = false
+
+[github]
+    user = dljsjr
+[log]
+    date = format:%F_%T
+[rerere]
+    enabled = true
+    autoUpdate = true
+
+[url "git@github.com:"]
+    insteadOf = "https://github.com/"
+
+[credential "https://github.com"]
+    helper =
+    helper = osxkeychain
+    helper = !gh auth git-credential
+    helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+    helper =
+    helper = osxkeychain
+    helper = !gh auth git-credential
+    helper = !gh auth git-credential
+
+[includeIf "gitdir/i:/opt/homebrew/Homebrew/"]
+    path = ~/.homebrew.gitconfig
+[includeIf "gitdir/i:/usr/local/Homebrew/"]
+    path = ~/.homebrew.gitconfig
+[includeIf "gitdir/i:/home/linuxbrew/.linuxbrew/Homebrew"]
+    path = ~/.homebrew.gitconfig
+
+[feature]
+    manyFiles = false

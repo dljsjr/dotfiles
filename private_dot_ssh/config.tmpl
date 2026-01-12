@@ -1,0 +1,54 @@
+Host *
+  {{- if eq .chezmoi.os "darwin" }}
+  AppleMultipath yes
+  IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+  {{ end -}}
+  AddressFamily inet
+  ControlMaster auto
+  ControlPath ~/.ssh/controlmasters/%r@%h__%p
+  ControlPersist 8h
+
+Host GameBox
+  AddressFamily inet
+  User "dstephen"
+  HostName 198.74.53.143
+  IdentityFile ~/.ssh/id_ed25519{{ if eq .chezmoi.os "darwin" }}.pub{{ end }}
+  AddKeysToAgent yes
+  ForwardAgent yes
+
+Host Jox
+  AddressFamily inet
+  User "dstephen"
+  HostName "jox.local"
+  IdentityFile ~/.ssh/id_ed25519{{ if eq .chezmoi.os "darwin" }}.pub{{ end }}
+  AddKeysToAgent yes
+  ForwardAgent yes
+
+Host rBlackLion
+  AddressFamily inet
+  User "dstephen"
+  HostName black-lion.local
+  IdentityFile ~/.ssh/id_ed25519
+  AddKeysToAgent yes
+  ForwardAgent yes
+
+  Host VoltBear
+    Hostname 192.168.1.39
+    User root
+    Port 2222
+    IdentityFile ~/.ssh/id_ed25519
+    RequestTTY yes
+
+Host Voltron
+  AddressFamily inet
+  User "dstephen"
+  HostName voltron.local
+  IdentityFile ~/.ssh/id_ed25519
+  AddKeysToAgent yes
+  ForwardAgent yes
+
+Host Marvin
+  AddressFamily inet
+  User "dougstephen"
+  ForwardAgent yes
+  HostName "marvin.local"
