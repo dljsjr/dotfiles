@@ -48,6 +48,8 @@ set -Ux LESS -FRX
 
 if test -s "$HOME/.cargo/env.fish"
     source "$HOME/.cargo/env.fish"
+else if test -d "$HOME/.cargo/bin"
+    __prepend_path "$HOME/.cargo/bin"
 end
 
 if test -x "/home/linuxbrew/.linuxbrew/bin/brew"
