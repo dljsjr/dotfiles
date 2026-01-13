@@ -37,6 +37,8 @@ brew "neovim" if OS.mac?
 brew "rsync" if OS.mac?
 brew "telnet" if OS.mac?
 brew "wget" if OS.mac?
+cask "font-intel-one-mono" if OS.mac?
+cask "font-intone-mono-nerd-font" if OS.mac?
 
 # Linuxbrew
 
