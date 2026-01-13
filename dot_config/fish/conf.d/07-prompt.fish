@@ -61,6 +61,11 @@ for tool in $tools
     set -g tide_{$tool}_bg_color normal
 end
 
+set -g tide_rustc_color F34C00
+set -g tide_node_color 5FA04E
+set -g tide_python_color 346E9D
+set -g tide_go_color 007D9C
+
 set -g tide_left_prompt_separator_same_color ''
 
 set -g tide_left_prompt_items os private_mode ssh_indicator context pwd direnv newline $tools vcs character

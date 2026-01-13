@@ -1,7 +1,7 @@
 set -gx COLORTERM truecolor
 set -g fish_term24bit 1
 # set -Ux _host_unique_bg_color brblack
-# set -Ux _host_unique_color brwhite
+set -Ux _host_unique_color brwhite
 
 # We prepend our own directories here to separate the stuff that we vendor via dotfiles from the
 # stuff that plugins might install
