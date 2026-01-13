@@ -1,0 +1,50 @@
+#!/usr/bin/env sh
+OP_KEYPATH=""
+SKIP_NEXT=false
+for arg
+do
+    if [ "$SKIP_NEXT" = true ]
+    then
+        SKIP_NEXT=false
+        continue
+    fi
+    case "$arg" in
+        --op-keypath)
+            OP_KEYPATH="$2"
+            shift
+            shift
+            SKIP_NEXT=true
+            ;;
+        *)
+            set -- "$@" "$arg"
+            shift
+            ;;
+    esac
+done
+
+FIFO_TMPDIR="$(mktemp -d)"
+SECRET_KEY_FIFO="${FIFO_TMPDIR}/tmpfifo"
+mkfifo "$SECRET_KEY_FIFO"
+
+OP_PID=
+cleanup() {
+    if kill -s 0 $OP_PID >/dev/null 2>&1
+    then
+        kill -s INT $OP_PID
+    fi
+
+    if [ -f "$SECRET_KEY_FIFO" ]
+    then
+        rm "$SECRET_KEY_FIFO"
+    fi
+
+    if [ -d "$FIFO_TMPDIR" ]
+    then
+        rm -r "$FIFO_TMPDIR"
+    fi
+}
+trap cleanup EXIT
+
+op read "$OP_KEYPATH" > "$SECRET_KEY_FIFO" &
+OP_PID="$!"
+age --identity "$SECRET_KEY_FIFO" "$@"
