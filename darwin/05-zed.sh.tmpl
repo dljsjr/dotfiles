@@ -9,3 +9,5 @@ DOWNLOAD_URL="$(curl -sL -H "Accept: application/vnd.github+json" https://api.gi
 {{ end -}}
 {{ includeTemplate "install_app_from_dmg" $ -}}
 {{ end -}}
+
+ln -sfF /Applications/Zed.app/Contents/MacOS/cli ~/.local/bin/zed
