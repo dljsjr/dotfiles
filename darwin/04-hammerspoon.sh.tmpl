@@ -1,5 +1,10 @@
 #!/usr/bin/env sh
 {{ if eq .chezmoi.os "darwin" -}}
+{{ if eq .chezmoi.arch "arm64" -}}
+sudo mkdir -p /opt/hammerspoon/bin
+sudo mkdir -p /opt/hammerspoon/share/man/man1
+sudo chown -R {{ .chezmoi.username }}:{{ .chezmoi.username }} /opt/hammerspoon
+{{ end -}}
 APP_NAME='Hammerspoon'
 CF_BUNDLE_ID='org.hammerspoon.Hammerspoon'
 DOWNLOAD_URL="$(curl -sL -H "Accept: application/vnd.github+json" https://api.github.com/repos/Hammerspoon/hammerspoon/releases/latest | sed -n -e 's/^.*"browser_download_url":[^"]*"\(.*Hammerspoon-.*\.zip\).*$/\1/p')"
