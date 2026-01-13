@@ -3,8 +3,8 @@
     "vscode-dark-modern": true,
   },
   "buffer_font_family": "Intel One Mono",
-  "ui_font_size": 18.0,
-  "buffer_font_size": 16.0,
+  "ui_font_size": 14.0,
+  "buffer_font_size": 14.0,
   "disable_ai": true,
   "vim": {
     "toggle_relative_line_numbers": true,
