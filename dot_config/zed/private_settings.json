@@ -1,0 +1,60 @@
+{
+  "auto_install_extensions": {
+    "vscode-dark-modern": true,
+  },
+  "buffer_font_family": "Intel One Mono",
+  "ui_font_size": 18.0,
+  "buffer_font_size": 16.0,
+  "disable_ai": true,
+  "vim": {
+    "toggle_relative_line_numbers": true,
+  },
+  "restore_on_startup": "last_session",
+  "diagnostics": {
+    "include_warnings": true,
+    "inline": {
+      "enabled": true,
+    },
+  },
+  "inlay_hints": {
+    "enabled": true,
+  },
+  "vim_mode": true,
+  "outline_panel": {
+    "dock": "right",
+  },
+  "theme": "VSCode Dark Modern",
+  "features": {
+    "edit_prediction_provider": "none",
+  },
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false,
+  },
+  "active_pane_modifiers": {
+    "border_size": 1.0,
+    "inactive_opacity": 0.8,
+  },
+  "tabs": {
+    "file_icons": true,
+    "git_status": true,
+    "show_diagnostics": "all",
+    "show_close_button": "always",
+  },
+  "preferred_line_length": 100,
+  "show_whitespaces": "boundary",
+  "centered_layout": {
+    "left_padding": 0.08,
+    "right_padding": 0.08,
+  },
+  "buffer_font_fallbacks": ["Apple Color Emoji"],
+  "terminal": {
+    "font_family": "IntoneMono Nerd Font",
+    "line_height": "standard",
+    "option_as_meta": true,
+    "font_features": {
+      "calt": true,
+    },
+    "font_fallbacks": ["Apple Color Emoji"],
+  },
+}
