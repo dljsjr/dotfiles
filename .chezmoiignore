@@ -40,11 +40,5 @@ README.md
 .hammerspoon
 {{ end -}}
 
-{{ if eq .chezmoi.os "darwin" -}}
-.hammerspoon/.editorconfig
-.hammerspoon/.luarc.json
-.haammerspoon/Spoons
-{{ end -}}
-
 bin/
 darwin/
