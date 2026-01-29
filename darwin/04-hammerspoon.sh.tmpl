@@ -3,7 +3,7 @@
 {{ if eq .chezmoi.arch "arm64" -}}
 sudo mkdir -p /opt/hammerspoon/bin
 sudo mkdir -p /opt/hammerspoon/share/man/man1
-sudo chown -R {{ .chezmoi.username }}:{{ .chezmoi.username }} /opt/hammerspoon
+sudo chown -R {{ .chezmoi.username | quote }}:{{ .chezmoi.group | quote }} /opt/hammerspoon
 {{ end -}}
 APP_NAME='Hammerspoon'
 CF_BUNDLE_ID='org.hammerspoon.Hammerspoon'
