@@ -36,9 +36,12 @@ README.md
 {{- end }}
 {{- end }}
 
+darwin/
 {{ if ne .chezmoi.os "darwin" -}}
 .hammerspoon
+*/darwin/
+*/**/darwin/
+**/*-darwin-*
 {{ end -}}
 
 bin/
-darwin/
