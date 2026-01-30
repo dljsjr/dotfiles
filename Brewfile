@@ -33,6 +33,7 @@ brew "zoxide"
 
 # macOS Formulae
 brew "curl" if OS.mac?
+brew "gpg" if OS.mac?
 brew "neovim" if OS.mac?
 brew "rsync" if OS.mac?
 brew "telnet" if OS.mac?
