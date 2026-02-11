@@ -1,11 +1,21 @@
 {
+  "edit_predictions": {
+    "provider": "none",
+  },
   "auto_install_extensions": {
     "vscode-dark-modern": true,
+  },
+  "project_panel": {
+    "bold_folder_labels": true,
+  },
+  "agent": {
+    "play_sound_when_agent_done": true,
+    "use_modifier_to_send": true,
+    "show_turn_stats": true,
   },
   "buffer_font_family": "Intel One Mono",
   "ui_font_size": 14.0,
   "buffer_font_size": 14.0,
-  "disable_ai": true,
   "vim": {
     "toggle_relative_line_numbers": true,
   },
@@ -24,9 +34,6 @@
     "dock": "right",
   },
   "theme": "VSCode Dark Modern",
-  "features": {
-    "edit_prediction_provider": "none",
-  },
   "telemetry": {
     "diagnostics": false,
     "metrics": false,
