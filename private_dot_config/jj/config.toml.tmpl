@@ -12,10 +12,8 @@ delta = [
   "jj",
   "--config",
   "ui.pager=delta",
-  "--config",
-  "ui.diff.format=git",
 ]
-difft = ["util", "exec", "--", "jj", "--config", "ui.diff.tool=difft"]
+difft = ["util", "exec", "--", "jj", "--config", "ui.diff-formatter=difft"]
 
 [fsmonitor]
 backend = "watchman"
