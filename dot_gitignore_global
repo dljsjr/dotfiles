@@ -2,7 +2,16 @@
 .DS_Store
 
 .mise.local.toml
+
+# IDE stuff
 .zed/
 .vscode/
 .idea/
+
+# agent stuff
+.serena/
+.gemini/
+AGENTS*.md
+GEMINI*.md
+CLAUDE*.md
 
