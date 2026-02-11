@@ -2,6 +2,7 @@
 slsa-verifier = "latest"
 cosign = "latest"
 rust = "latest"
+"cargo:ouch" = "latest"
 
 [settings]
 experimental = true
