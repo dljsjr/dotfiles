@@ -45,7 +45,7 @@ end
 set -Ux EDITOR nvim
 set -Ux VISUAL nvim
 set -Ux ALTERNATE_EDITOR vim
-set -Ux LESS -FRX
+set -Ux LESS "-SIFRQ --mouse --incsearch --redraw-on-quit --no-vbell"
 
 if test -s "$HOME/.cargo/env.fish"
     source "$HOME/.cargo/env.fish"

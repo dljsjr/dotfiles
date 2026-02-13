@@ -17,7 +17,7 @@ function _fzf_search_history --description "Search command history. Replace the 
     # Delinate commands throughout pipeline using null rather than newlines because commands can be multi-line
     set -f commands_selected (
         builtin history --null --show-time="$fzf_history_time_format │ " |
-        _fzf_wrapper --read0 \
+        _fzf_wrapper --with-shell "$(command --search fish) --no-config --command" --read0 \
             --print0 \
             --multi \
             --scheme=history \

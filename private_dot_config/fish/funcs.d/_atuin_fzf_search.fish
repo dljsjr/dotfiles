@@ -9,7 +9,7 @@ function _atuin_fzf_search
 
     set -lx PARENT_ATUIN_SESSION $ATUIN_SESSION
     set -f commands_selected (_atuin_fzf_format --reverse --filter-mode $filter_mode $argv |
-        _fzf_wrapper \
+        _fzf_wrapper --with-shell "$(command --search fish) --no-config --command" \
             --read0 \
             --print0 \
             --multi \

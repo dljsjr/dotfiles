@@ -1,8 +1,5 @@
 if type -q zellij
-    if not test -f $HOME/.config/fish/completions/zellij.fish
-        zellij setup --generate-completion fish >$HOME/.config/fish/completions/zellij.fish
-    end
-    if test -d "$HOME/.config/zide/bin"
+        if test -d "$HOME/.config/zide/bin"
         __prepend_path "$HOME/.config/zide/bin"
     end
 end
