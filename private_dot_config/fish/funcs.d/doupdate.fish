@@ -17,6 +17,19 @@ function doupdate
         end
     end
 
+    if type -q brew
+        brew upgrade
+        sleep 0.5
+        brew autoremove
+        sleep 0.5
+        brew cleanup
+    end
+
+    if type -q mise
+	mise self-update
+	mise upgrade --bump
+    end
+
     if type -q rustup
         rustup update
     end
@@ -25,12 +38,8 @@ function doupdate
         cargo install-update -a
     end
 
-    if type -q brew
-        brew upgrade
-        sleep 0.5
-        brew autoremove
-        sleep 0.5
-        brew cleanup
+    if type -q mas && test -n "$(mas outdated 2>/dev/null)"
+	mas upgrade	
     end
 
     if type -q fwupdmgr; and fwupdmgr get-devices 2>/dev/null | grep -v -q "No hardware detected"

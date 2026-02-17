@@ -22,7 +22,7 @@ set -U tide_jj_bookmarks_truncation_strategy end
 set -U tide_jj_bookmarks_truncation_length 20
 
 set -U tide_jj_description_truncation_strategy end
-set -U tide_jj_description_truncation_length 20
+set -U tide_jj_description_truncation_length 10
 
 function __jj_prompt
     set bookmarks_icon_template 'raw_escape_sequence("'(set_color $tide_jj_bookmarks_icon_color)'") ++ if(bookmarks.len() == 1, "'$tide_jj_bookmark_icon'", "'$tide_jj_multi_bookmark_icon'")'

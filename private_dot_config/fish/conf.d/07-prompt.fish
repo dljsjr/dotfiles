@@ -32,7 +32,7 @@ set -g tide_status_color green
 set -g tide_status_icon '󰸞 '
 set -g tide_status_icon_failure ''
 
-set -g tide_right_prompt_items time cmd_duration always_status shlvl jobs
+set -g tide_right_prompt_items time cmd_duration always_status shlvl jobs mise
 
 set -g tide_context_color_default $_host_unique_color
 set -g tide_context_color_ssh $_host_unique_color
