@@ -1,0 +1,404 @@
+#!/usr/bin/env sh
+
+set -u
+SANDBOXED="true"
+WITH_HOST_PATH="false"
+PREFER_BUN="false"
+DEBUG_SBPL="false"
+TARGET_DIR=
+NUM_RW=0
+NUM_RO=0
+NUM_EXE=0
+SBPL_POLICY_FILE=
+
+function __policy_paths_for_bin_dir() {
+    printf '    (subpath "%s")\n' "$(resolvepath "$1")"
+    for f in "$1"/*
+    do
+        if [ -L "$f" ]
+        then
+            printf '    (literal "%s")\n' "$(resolvepath "$f")"
+        fi
+    done
+}
+
+function __resolvepath_impl() {
+    if [ -d "$1" ]
+    then
+        { cd "$1" && command pwd -P; }
+    elif [ -f "$1" ]
+    then
+        realpath "$1"
+    else
+        printf "warning(resolvepath): file/dir [%s] does not exist, cannot resolve, using original value\n" "$1" >&2
+        printf "%s\n" "$1"
+    fi
+    set +x
+}
+
+function resolvepath() {
+    if ! [ -t 0 ]
+    then
+        while IFS= read -r line
+        do
+            __resolvepath_impl "$line"
+        done
+    else
+        for arg in "$@"
+        do
+            __resolvepath_impl "$arg"
+        done
+    fi
+}
+
+function gen_includes() {
+    __policy_action="$1"
+    __var_prefix="$2"
+    __var_count="$3"
+    __bins_dir="${4:-'false'}"
+
+    echo "$__policy_action"
+    idx=0
+    while [ "$idx" -lt "$__var_count" ]
+    do
+        include_target="$(eval "printf '%s' \$${__var_prefix}_${idx}")"
+        if [ -d "$include_target" ]
+        then
+            if [ "$__bins_dir" = "true" ]
+            then
+                __policy_paths_for_bin_dir "$include_target"
+            else
+                printf '    (subpath "%s")\n' "$(resolvepath "$include_target")"
+            fi
+        elif [ -f "$include_target" ]
+        then
+            printf '    (literal "%s")\n' "$(resolvepath "$include_target")"
+        fi
+        idx=$(( idx + 1 ))
+    done
+    echo ')'
+}
+
+function gen_ro_includes() {
+    echo ';; begin additional flag-provided read-only includes'
+    gen_includes '(allow file-read*' "INCLUDE_RO" "$NUM_RO" 'false'
+}
+
+function gen_rw_includes() {
+    echo ';; begin additional flag-provided read-write includes'
+    gen_includes '(allow file-write*' "INCLUDE_RW" "$NUM_RW" 'false'
+}
+
+function gen_exe_includes() {
+    echo ';; begin additional flag-provided executable includes'
+    gen_includes '(allow file-read* process-exec' "INCLUDE_EXE" "$NUM_EXE" 'true'
+}
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+        [!-]*)
+            if [ -n "$TARGET_DIR" ]
+            then
+                printf "cannot specify target dir more than once\n" >&2
+                exit 1
+            fi
+            TARGET_DIR="$1"
+            ;;
+        -w | --include-read-write)
+            eval "INCLUDE_RW_${NUM_RW}=\"$2\""
+            NUM_RW=$(( NUM_RW + 1 ))
+            shift
+            ;;
+        -r | --include-read-only)
+            eval "INCLUDE_RO_${NUM_RO}=\"$2\""
+            NUM_RO=$(( NUM_RO + 1 ))
+            shift
+            ;;
+        -e | --include-executable)
+            eval "INCLUDE_EXE_${NUM_EXE}=\"$2\""
+            NUM_EXE=$(( NUM_EXE + 1 ))
+            shift
+            ;;
+        -p | --policy-file)
+            SBPL_POLICY_FILE="$2"
+            shift
+            ;;
+        -b | --prefer-bun)
+            PREFER_BUN="true"
+            ;;
+        --with-host-path)
+            WITH_HOST_PATH="true"
+            ;;
+        --no-sandbox)
+            SANDBOXED="false"
+            ;;
+        --debug-sandbox-policy)
+            DEBUG_SBPL="true"
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            printf "unexpected arg/opt %s\n" "$1" >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+if [ $NUM_RW -gt 0 ] && [ "$SANDBOXED" = false ]
+then
+    printf "warning: --include-dirs only used when sandboxing, ignoring included directories\n" >&2
+fi
+
+if [ -z "$TARGET_DIR" ]
+then
+    TARGET_DIR="$(command pwd -P)"
+fi
+
+if ! [ -d "$TARGET_DIR" ]
+then
+    printf "target dir '%s' does not exist\n" "$TARGET_DIR" >&2
+    exit 1
+fi
+TARGET_DIR="$(resolvepath "$TARGET_DIR")"
+
+RUNTIME="node"
+MISE_NPM_PACKAGE_MANAGER="npm"
+if mise --quiet --silent which bun >/dev/null 2>&1 && [ "$PREFER_BUN" = "true" ]
+then
+    RUNTIME="bun"
+    MISE_NPM_PACKAGE_MANAGER="bun"
+fi
+
+
+export SANDBOXED
+export TARGET_DIR
+export MISE_NPM_PACKAGE_MANAGER
+
+if [ "$SANDBOXED" = false ]
+then
+    if [ "$DEBUG_SBPL" = "true" ]
+    then
+        printf "sandbox disabled, no generated policy to debug\n" >&2
+    fi
+    exec mise exec --cd "$TARGET_DIR" ${RUNTIME}@latest -- pi "$@"
+fi
+
+__PROFILE=
+if [ -n "$SBPL_POLICY_FILE" ]
+then
+    SBPL_POLICY_FILE="$(resolvepath "$SBPL_POLICY_FILE")"
+    if ! [ -f "$SBPL_POLICY_FILE" ]
+    then
+        printf "policy file %s does not exist\n" "$SBPL_POLICY_FILE" >&2
+        exit 1
+    fi
+__PROFILE=$(cat "$SBPL_POLICY_FILE")
+else
+TMPDIR="$(resolvepath "$(mktemp -d)")"
+if [ -z "$TMPDIR" ]
+then
+    printf "couldn't create tmpdir\n"
+    exit 1
+fi
+export TMPDIR
+
+__PROFILE=$(
+printf \
+'(version 1)
+(deny default)
+
+(allow mach-lookup)
+(allow sysctl-read)
+(allow network*)
+
+(allow file-ioctl file*
+    (literal "/dev/dtracehelper")
+    (regex #"/dev/tty[a-zA-Z]?[0-9]*")
+)
+
+(allow ipc-posix-shm-read*
+    (ipc-posix-name-prefix
+        "apple.shm."
+        "apple.cfprefs."
+    )
+)
+
+(allow system-socket
+    (require-all
+        (socket-domain AF_SYSTEM)
+        (socket-protocol 2)
+    )
+)
+
+(deny process*)
+(allow process* (target self))
+(allow process-fork)
+
+(allow file*
+    (literal "/dev/null")
+    (subpath "%s")
+    (subpath "%s")
+    (subpath "%s/.pi")
+)
+
+' "$TARGET_DIR" "$TMPDIR" "$HOME"
+
+echo '(allow file-read* process-exec process-exec-interpreter'
+printf '    (literal "/usr/bin/env")\n'
+grep '^/.*$' /etc/shells | resolvepath | xargs printf '    (literal "%s")\n' | sort -u
+echo ')'
+
+echo
+
+printf '(allow process-exec (literal "%s"))\n' "$(resolvepath "$(command -v mise)")"
+
+echo
+
+echo '(allow file-read*'
+printf '    (literal "/")\n'
+printf '    (literal "/etc/hosts")\n'
+printf '    (literal "/private/etc/hosts")\n'
+printf '    (literal "/System/Volumes/Preboot/Cryptexes/OS/System/Library/dyld")\n'
+printf '    (literal "%s")\n' "$(resolvepath "$(dirname "$(command -v mise)")")"
+echo
+printf '    (subpath "/usr/share/locale")\n'
+echo
+set +u
+(test -n "$MISE_INSTALLS_DIR" && printf '    (subpath "%s")\n' "$(resolvepath "${MISE_INSTALLS_DIR}")")
+set -u
+printf '    (subpath "%s")\n' "$(resolvepath "${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}")"
+printf '    (subpath "%s")\n' "$(resolvepath "${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}")"
+printf '    (subpath "%s")\n' "$(resolvepath "${MISE_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/mise}")"
+printf '    (subpath "%s")\n' "$(resolvepath "${MISE_CACHE_DIR:-$HOME/Library/Caches/mise}")"
+echo
+mise doctor path | grep -v "^${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}" | resolvepath | xargs printf '    (literal "%s")\n' | sort -u
+echo ')'
+
+echo
+
+echo '(allow file-read* process-exec'
+{
+    printf '    (subpath "/bin")\n'
+    printf '    (subpath "/sbin")\n'
+    printf '    (subpath "/usr/bin")\n'
+    printf '    (subpath "/usr/sbin")\n'
+    set +u
+    mise doctor path |\
+    grep "${MISE_INSTALLS_DIR:-${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise/installs}}" |\
+    grep -e node/ -e bun/ -e npm/ -e pi-coding-agent/ |\
+    sed -n -e "s|\(${MISE_INSTALLS_DIR:-${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise/installs}}/[^/]\{1,\}\)/.*\$|\1|p" |\
+    resolvepath | xargs printf '    (subpath "%s")\n'
+    set -u
+    ( IFS=:; [ "$WITH_HOST_PATH" = "true" ] && for p in $PATH; do __policy_paths_for_bin_dir "$p"; done )
+    (
+        for __ed in "$EDITOR" "$VISUAL" "$ALTERNATE_EDITOR"
+        do
+            if [ -n "$__ed" ] && command -v "$__ed" >/dev/null 2>&1
+            then
+                printf '    (literal "%s")\n' "$(resolvepath "$(command -v "$__ed")")"
+            fi
+        done
+    )
+} | sort -u
+echo ')'
+echo
+printf \
+'(allow file-read-data
+    (literal "/dev/autofs_nowait")
+    (subpath "/usr/share/zoneinfo.default")
+
+    (literal "/Library/Preferences/com.apple.networkd.plist")
+    (literal "/Library/Preferences/Logging/com.apple.diagnosticd.filter.plist")
+    (literal "/System/Library/OpenSSL/openssl.cnf")
+    (literal "/System/Volumes/Preboot/Cryptexes/OS")
+
+    (literal "%s/.CFUserTextEncoding")
+)
+' "$HOME"
+
+echo
+
+echo '(allow file-read-metadata'
+{
+    printf '    (literal "/")\n'
+    printf '    (literal "/etc")\n'
+    printf '    (literal "/usr")\n'
+    printf '    (literal "/var")\n'
+    printf '    (literal "/Users")\n'
+    printf '    (literal "/private/var/db/timezone/zoneinfo")\n'
+    printf '    (literal "/System/Cryptexes/App")\n'
+    printf '    (literal "/System/Cryptexes/OS")\n'
+    printf '    (literal "/System/Volumes/Preboot/Cryptexes/OS/System/Library/dyld")\n'
+    printf '    (literal "/System/Library/Frameworks/Security.framework")\n'
+    printf '    (literal "%s")\n' "$HOME"
+    (
+        for __target in "$TARGET_DIR" \
+        "${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}" \
+        "${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}" \
+        "${MISE_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/mise}" \
+        "${MISE_INSTALLS_DIR:-${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise/installs}}"
+        do
+            dirwalk="$__target"
+            while ! { [ "$dirwalk" = "$HOME" ] || [ "$dirwalk" = "/" ]; }
+            do
+                printf '    (literal "%s")\n' "$(resolvepath "$dirwalk")"
+                dirwalk="$(dirname "$dirwalk")"
+            done
+        done
+    )
+    set +u
+    (test -n "$MISE_INSTALLS_DIR" && printf '    (subpath "%s")\n' "$(resolvepath "$(dirname "${MISE_INSTALLS_DIR}")")")
+    set -u
+} | sort -u
+echo ')'
+)
+fi
+
+if command -v brew >/dev/null 2>&1 && { echo "$__PROFILE" | grep --quiet -m 1 "\"$(brew --prefix)[^\"]\{0,\}\""; }
+then
+__PROFILE=$(
+echo "$__PROFILE"
+echo
+printf '(allow file-read* (subpath "%s"))\n' "$(brew --prefix)"
+)
+fi
+
+if [ "$NUM_RO" -gt 0 ]
+then
+__PROFILE=$(
+echo "$__PROFILE"
+echo
+gen_ro_includes
+)
+fi
+
+if [ "$NUM_RW" -gt 0 ]
+then
+__PROFILE=$(
+echo "$__PROFILE"
+echo
+gen_rw_includes
+)
+fi
+
+if [ "$NUM_EXE" -gt 0 ]
+then
+__PROFILE=$(
+echo "$__PROFILE"
+echo
+gen_exe_includes
+)
+fi
+
+if [ "$DEBUG_SBPL" = "true" ]
+then
+    printf "dumping sandbox policy contents to stdout\n\n" >&2
+    echo "$__PROFILE"
+else
+    sandbox-exec -p "$__PROFILE" mise exec --cd "$TARGET_DIR" ${RUNTIME}@latest -- pi --verbose "$@"
+    exit "$?"
+fi
