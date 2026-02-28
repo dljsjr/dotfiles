@@ -19,6 +19,7 @@ Host *
   AppleMultipath yes
   IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
   {{ end -}}
+  IdentityFile ~/.ssh/id_ed25519{{ if eq .chezmoi.os "darwin" }}.pub{{ end }}
   AddressFamily inet
   ControlMaster auto
   ControlPath ~/.ssh/controlmasters/%r@%h__%p
