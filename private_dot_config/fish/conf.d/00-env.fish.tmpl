@@ -12,19 +12,21 @@ set --prepend fish_function_path "$__fish_config_dir/funcs.d"
 set --prepend fish_complete_path "$__fish_config_dir/complete.d"
 set --prepend fish_function_path "$__fish_config_dir/funcs.d/{{ .chezmoi.os }}"
 
-if not set -q _host_unique_bg_color
+function __regen_host_bg_color
     set -l hex_chars 0 1 2 3 4 5 6 7 8 9 a b c d e f
     set -l gen_color
 
-    # seed the RNG with a hex integer derived from hashing the hostname; the
-    # double md5 hash is a janky way of introducing more variance
-    random (math "0x$(echo -n "ssh://$USER@$hostname" | md5sum | md5sum | cut -c1-8)")
+    random (math "0x$(echo -n "ssh://$USER@$hostname $(date "+%s")" | md5sum | cut -c1-8)")
 
     for i in (seq 1 6)
         set -a gen_color (random choice $hex_chars)
     end
 
     set -Ux _host_unique_bg_color (string join '' $gen_color)
+end
+
+if not set -q _host_unique_bg_color
+    __regen_host_bg_color
 end
 
 set -Ux fish_color_autosuggestion 808080
