@@ -19,7 +19,7 @@ quick-terminal-screen = macos-menu-bar
 
 # shell integration
 shell-integration = detect
-shell-integration-features = cursor, title, sudo
+shell-integration-features = cursor, title, sudo, ssh-terminfo, ssh-env
 
 # clipboard
 clipboard-read = allow
@@ -27,3 +27,5 @@ clipboard-write = allow
 
 # keybinds
 keybind = global:f12=toggle_quick_terminal
+keybind = alt+backspace=text:\x1b\x7f
+keybind = shift+enter=text:\n
