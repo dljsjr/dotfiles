@@ -1,4 +1,5 @@
 {
+  "icon_theme": "VSCode Icons for Zed (Dark)",
   "edit_predictions": {
     "provider": "none",
   },
