@@ -9,6 +9,7 @@ Brewfile
 .DS_STORE
 .Trash
 .DS_Store
+**/.DS_Store
 .config/chezmoi
 .lesshst
 .rustup
@@ -21,6 +22,7 @@ README.md
 .local/share/atuin
 .local/share/fish
 .local/share/nvim
+.local/share/delta
 .local/state
 {{ range $binFile := glob (joinPath .chezmoi.homeDir ".local" "bin" "**" "*") -}}
 {{- with $mime := output "file" "-b" "-L" "--mime" $binFile -}}
