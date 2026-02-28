@@ -1,8 +1,10 @@
 [tools]
 slsa-verifier = "latest"
 cosign = "latest"
-rust = "latest"
-"cargo:ouch" = "latest"
+rust = "stable"
+uv = "latest"
+npm = "latest"
+"npm:@mariozechner/pi-coding-agent" = "latest"
 
 [settings]
 experimental = true
@@ -13,3 +15,6 @@ uvx = true
 
 [settings.python]
 uv_venv_auto = true
+
+[settings.npm]
+package_manager = "bun"
