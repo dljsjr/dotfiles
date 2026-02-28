@@ -11,6 +11,8 @@
 # agent stuff
 .serena/
 .gemini/
+.pi/
+.claude/
 AGENTS*.md
 GEMINI*.md
 CLAUDE*.md
