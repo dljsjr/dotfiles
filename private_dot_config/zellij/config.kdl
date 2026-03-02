@@ -13,6 +13,10 @@ plugins {
         reaction_seconds "0.3"
         print_to_log true
     }
+
+    compact-bar location="zellij:compact-bar" {
+      tooltip "F1"
+    }
 }
 
 load_plugins {
