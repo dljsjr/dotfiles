@@ -3,7 +3,10 @@ slsa-verifier = "latest"
 cosign = "latest"
 rust = "stable"
 uv = "latest"
+bun = "latest"
+node = "lts"
 npm = "latest"
+lua = "5.5"
 "npm:@mariozechner/pi-coding-agent" = "latest"
 
 [settings]
