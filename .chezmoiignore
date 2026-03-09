@@ -18,6 +18,9 @@ Brewfile
 **/.mise.local.toml
 README.md
 
+# installed by ~/git/gh-contrib/install.sh (see run_onchange_after_04-gh-contrib.sh)
+.local/bin/gh-*.sh
+
 .local/share/mise
 .local/share/atuin
 .local/share/fish
