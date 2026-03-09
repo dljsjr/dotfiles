@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+
+if [ "$1" = "board" ]; then
+    shift
+    nohup mise exec bun -- bun run --bun "$HOME/.sandpiper/agent/skills-archive/glimpse-task-board/scripts/task-board.mjs" "$@" >"${XDG_STATE_HOME:-$HOME/.local/state}/sandpiper/taskboard.stdout" 2>"${XDG_STATE_HOME:-$HOME/.local/state}/sandpiper/taskboard.stderr" &
+    exit
+fi
+
+if [ "$(basename "$0")" = "@sandpiper" ]; then
+    printf "running in development mode\n\n" >&2
+    mise exec bun -- bun --workspaces --cwd=$HOME/git/sandpiper-ai install --recursive
+    exec mise exec bun -- bun run --bun $HOME/git/sandpiper-ai/packages/trail/src/index.ts "$@"
+fi
+
+exec mise exec bun -- bun run --bun $HOME/git/sandpiper-ai/node_modules/.bin/trail "$@"
