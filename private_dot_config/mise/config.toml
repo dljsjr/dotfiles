@@ -7,7 +7,8 @@ bun = "latest"
 node = "lts"
 npm = "latest"
 lua = "5.5"
-"npm:@mariozechner/pi-coding-agent" = "latest"
+"npm:glimpseui" = "latest"
+"npm:@earendil-works/pi-coding-agent" = "latest"
 
 [settings]
 experimental = true
