@@ -1,3 +1,7 @@
+# Overlay-provided host fragments (work machines, etc.) take precedence over
+# the host blocks and defaults below; ssh uses the first obtained value per option.
+Include config.d/*.conf
+
 Host GameBox
   AddressFamily inet
   User "dstephen"
