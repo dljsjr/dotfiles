@@ -1,68 +1,161 @@
 {
+  "context_servers": {
+    "navigator": {
+      "enabled": true,
+      "remote": false,
+      "settings": {}
+    }
+  },
+  "show_signature_help_after_edits": true,
+  "auto_signature_help": false,
+  "code_lens": "on",
+  "calls": {
+    "mute_on_join": true
+  },
+  "git": {
+    "inline_blame": {
+      "show_commit_summary": true
+    }
+  },
+  "bottom_dock_layout": "right_aligned",
+  "tab_bar": {
+    "show_pinned_tabs_in_separate_row": false
+  },
+  "title_bar": {
+    "show_menus": false,
+    "show_branch_status_icon": true
+  },
+  "status_bar": {
+    "show_active_file": true
+  },
+  "document_symbols": "on",
+  "document_folding_ranges": "on",
+  "semantic_tokens": "combined",
+  "lsp_document_colors": "inlay",
+  "completion_menu_scrollbar": "auto",
+  "toolbar": {
+    "code_actions": true
+  },
+  "minimap": {
+    "show": "always"
+  },
+  "sticky_scroll": {
+    "enabled": true
+  },
+  "scroll_beyond_last_line": "vertical_scroll_margin",
+  "colorize_brackets": true,
+  "diff_view_style": "split",
+  "agent_servers": {
+    "codex-acp": {
+      "type": "registry"
+    },
+    "sandpiper": {
+      "type": "custom",
+      "command": "mise",
+      "args": ["x", "bun@latest", "--", "bunx", "--bun", "--silent", "pi-acp"],
+      "env": {
+        "PI_ACP_ENABLE_EMBEDDED_CONTEXT": "true",
+        "PI_ACP_PI_COMMAND": "sandpiper",
+        "PI_CODING_AGENT_DIR": "/Users/doug.stephen/.sandpiper/agent",
+        "PI_PACKAGE_DIR": "/Users/doug.stephen/git/sandpiper-ai"
+      }
+    },
+    "claude-acp": {
+      "favorite_config_option_values": {
+        "mode": ["bypassPermissions"],
+        "effort": ["high", "xhigh", "max"],
+        "model": ["default"]
+      },
+      "type": "registry"
+    }
+  },
+  "collaboration_panel": {
+    "dock": "right"
+  },
   "icon_theme": "VSCode Icons for Zed (Dark)",
   "edit_predictions": {
-    "provider": "none",
+    "provider": "none"
   },
   "auto_install_extensions": {
-    "vscode-dark-modern": true,
+    "vscode-dark-modern": true
   },
   "project_panel": {
-    "bold_folder_labels": true,
+    "git_status_indicator": true,
+    "diagnostic_badges": true,
+    "dock": "left",
+    "bold_folder_labels": true
   },
   "agent": {
-    "play_sound_when_agent_done": true,
+    "single_file_review": true,
+    "sidebar_side": "right",
+    "dock": "right",
+    "thinking_display": "preview",
+    "play_sound_when_agent_done": "always",
     "use_modifier_to_send": true,
-    "show_turn_stats": true,
+    "show_turn_stats": true
   },
   "buffer_font_family": "Intel One Mono",
   "ui_font_size": 14.0,
   "buffer_font_size": 14.0,
   "vim": {
-    "toggle_relative_line_numbers": true,
+    "toggle_relative_line_numbers": true
   },
   "restore_on_startup": "last_session",
   "diagnostics": {
     "include_warnings": true,
     "inline": {
-      "enabled": true,
-    },
+      "enabled": true
+    }
   },
   "inlay_hints": {
-    "enabled": true,
+    "show_parameter_hints": true,
+    "show_background": true,
+    "enabled": true
   },
   "vim_mode": true,
   "outline_panel": {
-    "dock": "right",
+    "dock": "right"
   },
   "theme": "VSCode Dark Modern",
   "telemetry": {
     "diagnostics": false,
-    "metrics": false,
+    "metrics": false
   },
   "active_pane_modifiers": {
     "border_size": 1.0,
-    "inactive_opacity": 0.8,
+    "inactive_opacity": 0.8
   },
   "tabs": {
     "file_icons": true,
     "git_status": true,
     "show_diagnostics": "all",
-    "show_close_button": "always",
+    "show_close_button": "always"
   },
   "preferred_line_length": 100,
   "show_whitespaces": "boundary",
   "centered_layout": {
     "left_padding": 0.08,
-    "right_padding": 0.08,
+    "right_padding": 0.08
   },
   "buffer_font_fallbacks": ["Apple Color Emoji"],
   "terminal": {
+    "toolbar": {
+      "breadcrumbs": false
+    },
+    "show_count_badge": true,
     "font_family": "IntoneMono Nerd Font",
     "line_height": "standard",
     "option_as_meta": true,
     "font_features": {
-      "calt": true,
+      "calt": true
     },
-    "font_fallbacks": ["Apple Color Emoji"],
+    "font_fallbacks": ["Apple Color Emoji"]
   },
+  "git_panel": {
+    "tree_view": true,
+    "dock": "right",
+    "show_count_badge": true,
+    "file_icons": true,
+    "folder_icons": true
+  }
 }
