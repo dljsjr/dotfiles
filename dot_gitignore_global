@@ -8,12 +8,17 @@
 .vscode/
 .idea/
 
+# build output stuff
+target/
+node_modules/
+dist/
+
 # agent stuff
 .serena/
 .gemini/
 .pi/
+.sandpiper/
 .claude/
 AGENTS*.md
 GEMINI*.md
 CLAUDE*.md
-
