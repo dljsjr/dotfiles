@@ -25,4 +25,8 @@ if status is-interactive
     if functions -q _set_history_bindings
         _set_history_bindings --up=fzf,atuin --ctrl-r=fzf,atuin
     end
+
+    if test -s "$HOME/.sandpiper/shell-integrations/relay.fish"
+    	source "$HOME/.sandpiper/shell-integrations/relay.fish"
+    end
 end
