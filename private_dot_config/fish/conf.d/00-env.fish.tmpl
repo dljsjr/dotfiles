@@ -48,7 +48,16 @@ end
 set -Ux EDITOR nvim
 set -Ux VISUAL nvim
 set -Ux ALTERNATE_EDITOR vim
-set -Ux LESS "-SIFRQ --mouse --incsearch --redraw-on-quit --no-vbell"
+# --redraw-on-quit / --no-vbell don't exist in older less (Ubuntu 24.04 ships
+# 590) and unknown options in $LESS make every invocation print an error.
+# Probe the help text rather than guessing version thresholds.
+set -l _less_opts "-SIFRQ --mouse --incsearch"
+if type -q less
+    set -l _less_help (less --help 2>/dev/null | string collect)
+    string match -q -- '*--redraw-on-quit*' "$_less_help"; and set _less_opts "$_less_opts --redraw-on-quit"
+    string match -q -- '*--no-vbell*' "$_less_help"; and set _less_opts "$_less_opts --no-vbell"
+end
+set -Ux LESS "$_less_opts"
 
 if test -s "$HOME/.cargo/env.fish"
     source "$HOME/.cargo/env.fish"
