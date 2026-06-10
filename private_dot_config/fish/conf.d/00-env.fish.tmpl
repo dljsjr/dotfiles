@@ -57,15 +57,15 @@ else if test -d "$HOME/.cargo/bin"
 end
 
 if test -x "/home/linuxbrew/.linuxbrew/bin/brew"
-    /home/linuxbrew/.linuxbrew/bin/brew shellenv | source
+    /home/linuxbrew/.linuxbrew/bin/brew shellenv fish | source
 end
 
 if test -x "/usr/local/bin/brew"
-    /usr/local/bin/brew shellenv | source
+    /usr/local/bin/brew shellenv fish | source
 end
 
 if test -x "/opt/homebrew/bin/brew"
-    /opt/homebrew/bin/brew shellenv | source
+    /opt/homebrew/bin/brew shellenv fish | source
 end
 
 set -gx TZ America/Chicago
