@@ -54,7 +54,7 @@ cask "font-intone-mono-nerd-font" if OS.mac?
 # Mac App Store
 mas "1Password for Safari", id: 1569813296 if OS.mac?
 # mas "Amphetamine", id: 937984704 if OS.mac?
-# mas "DaisyDisk", id: 411643860 if OS.mac?
+mas "DaisyDisk", id: 411643860 if OS.mac?
 mas "Fantastical", id: 975937182 if OS.mac?
 # mas "Gapplin", id: 768053424 if OS.mac?
 mas "Gifski", id: 1351639930 if OS.mac?
