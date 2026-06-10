@@ -24,7 +24,7 @@ brew "jj"
 brew "jq"
 brew "just"
 brew "lnav"
-brew "mas"
+brew "mas" if OS.mac?
 brew "mise" unless which("mise", ORIGINAL_PATHS)
 brew "ninja"
 brew "ripgrep"
