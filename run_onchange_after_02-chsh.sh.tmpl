@@ -15,5 +15,8 @@ then
     then
         command -v fish | sudo tee -a /etc/shells > /dev/null >&2
     fi
-    chsh -s "$(command -v fish)"
+    # Run chsh as root: on Linux a bare `chsh` PAM-prompts for the user's own
+    # password, which locked-password accounts (e.g. cloud boxes with
+    # `password: '*'`) can never satisfy. Root skips the PAM check.
+    sudo chsh -s "$(command -v fish)" "{{ .chezmoi.username }}"
 fi
