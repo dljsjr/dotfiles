@@ -1,0 +1,1012 @@
+#!/usr/bin/env -S mise exec bun -- bun run --bun
+import { execFile } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { basename, dirname, join, resolve, sep } from "node:path";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+
+// Locate the system-installed glimpseui via mise (version-stamped install path,
+// so resolve at runtime rather than baking a stale path). GLIMPSEUI_DIR overrides.
+const GLIMPSEUI_DIR =
+  process.env.GLIMPSEUI_DIR ??
+  join(
+    (await execFileAsync("mise", ["where", "npm:glimpseui"])).stdout.trim(),
+    "node_modules",
+    "glimpseui",
+  );
+const { open } = await import(join(GLIMPSEUI_DIR, "src", "glimpse.mjs"));
+
+const TASKS =
+  process.env.SANDPIPER_TASKS_BIN ??
+  "/Users/doug.stephen/git/sandpiper-ai/packages/resources/skills/sandpiper/tasks/scripts/trail";
+function normalizeRepoPath(path) {
+  const resolved = resolve(path);
+  try {
+    return realpathSync(resolved);
+  } catch {
+    return resolved;
+  }
+}
+
+const INITIAL_REPO = normalizeRepoPath(process.env.SANDPIPER_TASKS_REPO ?? process.cwd());
+const INITIAL_PROJECT = process.env.SANDPIPER_TASKS_PROJECT ?? "ALL";
+const POLL_MS = 2_500;
+const STATE_HOME = process.env.XDG_STATE_HOME
+  ? resolve(process.env.XDG_STATE_HOME)
+  : join(homedir(), ".local", "state");
+const OPEN_REPOS_STATE_PATH = join(STATE_HOME, "sandpiper", "task-board-open-repos.json");
+const OPEN_REPOS_STATE_VERSION = 1;
+
+const statuses = [
+  { key: "NOT STARTED", title: "Not started", accent: "#64748b" },
+  { key: "IN PROGRESS", title: "In progress", accent: "#3b82f6" },
+  { key: "NEEDS REVIEW", title: "Needs review", accent: "#f59e0b" },
+];
+
+const priorityRank = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+const kindRank = { BUG: 0, TASK: 1, SUBTASK: 2 };
+
+function normalizeRepoList(repos) {
+  const seen = new Set();
+  const normalized = [];
+  for (const raw of Array.isArray(repos) ? repos : []) {
+    if (typeof raw !== "string" || !raw.trim()) continue;
+    const repo = normalizeRepoPath(raw.trim());
+    if (seen.has(repo)) continue;
+    seen.add(repo);
+    normalized.push(repo);
+  }
+  return normalized;
+}
+
+function hasTaskDirectory(repo) {
+  return existsSync(join(repo, ".sandpiper", "tasks"));
+}
+
+function openReposStateExists() {
+  return existsSync(OPEN_REPOS_STATE_PATH);
+}
+
+function readOpenReposState() {
+  try {
+    if (!openReposStateExists()) return [];
+    const parsed = JSON.parse(readFileSync(OPEN_REPOS_STATE_PATH, "utf8"));
+    return normalizeRepoList(parsed.repos);
+  } catch (error) {
+    console.error(
+      "Could not read task board open repos state",
+      error instanceof Error ? error.message : String(error),
+    );
+    return [];
+  }
+}
+
+function initialRepoList() {
+  const savedRepos = openReposStateExists() ? readOpenReposState() : [];
+  return hasTaskDirectory(INITIAL_REPO) ? normalizeRepoList([...savedRepos, INITIAL_REPO]) : savedRepos;
+}
+
+function persistOpenRepos() {
+  try {
+    mkdirSync(dirname(OPEN_REPOS_STATE_PATH), { recursive: true });
+    const payload = JSON.stringify(
+      {
+        version: OPEN_REPOS_STATE_VERSION,
+        repos: normalizeRepoList(tabs.map((tab) => tab.repo)),
+      },
+      null,
+      2,
+    );
+    const tempPath = `${OPEN_REPOS_STATE_PATH}.${process.pid}.tmp`;
+    writeFileSync(tempPath, `${payload}\n`);
+    renameSync(tempPath, OPEN_REPOS_STATE_PATH);
+  } catch (error) {
+    console.error(
+      "Could not write task board open repos state",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+}
+
+let win;
+let lastTasks = [];
+let loading = false;
+let closed = false;
+let nextTabNumber = 1;
+let nextChangeNoticeNumber = 1;
+const initialRepos = initialRepoList();
+let tabs = initialRepos.map((repo) =>
+  createRepoTab(repo, repo === INITIAL_REPO ? INITIAL_PROJECT : "ALL"),
+);
+let activeTabId =
+  (hasTaskDirectory(INITIAL_REPO) && tabs.find((tab) => tab.repo === INITIAL_REPO)?.id) ||
+  tabs[0]?.id ||
+  null;
+
+if (tabs.length === 0) persistOpenRepos();
+
+function repoLabel(repo) {
+  return basename(repo) || repo;
+}
+
+function createRepoTab(repo, initialProject = "ALL") {
+  return {
+    id: `repo-${nextTabNumber++}`,
+    repo,
+    label: repoLabel(repo),
+    initialProject,
+    tasks: [],
+    snapshot: null,
+    changed: false,
+    changeNotices: [],
+    updatedAt: null,
+    error: null,
+  };
+}
+
+function activeTab() {
+  return tabs.find((tab) => tab.id === activeTabId) ?? tabs[0] ?? null;
+}
+
+function tabSummaries() {
+  return tabs.map((tab) => ({
+    id: tab.id,
+    label: tab.label,
+    repo: tab.repo,
+    active: tab.id === activeTabId,
+    changed: tab.changed,
+    count: tab.tasks.filter((task) => task.status !== "COMPLETE").length,
+    error: tab.error,
+  }));
+}
+
+function assertRepoRoot(repo) {
+  if (repo.endsWith(`${sep}.sandpiper${sep}tasks`)) {
+    throw new Error("Open the repository root, not the .sandpiper/tasks directory.");
+  }
+}
+
+function execTasks(args, repo = activeTab()?.repo) {
+  if (!repo) throw new Error("Open a repository before running task commands.");
+  return execFileAsync(TASKS, args, {
+    cwd: repo,
+    maxBuffer: 30 * 1024 * 1024,
+    env: process.env,
+  });
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeTask(task) {
+  return {
+    key: task.key,
+    project: task.project ?? String(task.key ?? "").split("-")[0] ?? "UNKNOWN",
+    title: task.title ?? "(untitled)",
+    status: task.status ?? "NOT STARTED",
+    kind: task.kind ?? "TASK",
+    priority: task.priority ?? "LOW",
+    assignee: task.assignee ?? "UNASSIGNED",
+    reporter: task.reporter ?? "UNKNOWN",
+    parent: task.parent ?? null,
+    dependsOn: asArray(task.dependsOn ?? task.depends_on),
+    blockedBy: asArray(task.blockedBy ?? task.blocked_by),
+    related: asArray(task.related),
+    updatedAt: task.updatedAt ?? task.updated_at ?? null,
+    createdAt: task.createdAt ?? task.created_at ?? null,
+    resolution: task.resolution ?? null,
+  };
+}
+
+async function readTasks(repo = activeTab()?.repo) {
+  const { stdout } = await execTasks(["--format", "json", "task", "list"], repo);
+  return JSON.parse(stdout)
+    .map(normalizeTask)
+    .sort((a, b) => {
+      const project = a.project.localeCompare(b.project);
+      if (project !== 0) return project;
+      const priority = (priorityRank[a.priority] ?? 9) - (priorityRank[b.priority] ?? 9);
+      if (priority !== 0) return priority;
+      const kind = (kindRank[a.kind] ?? 9) - (kindRank[b.kind] ?? 9);
+      if (kind !== 0) return kind;
+      return a.key.localeCompare(b.key, undefined, { numeric: true });
+    });
+}
+
+function taskSnapshot(tasks) {
+  return JSON.stringify(
+    tasks.map((task) => [
+      task.key,
+      task.title,
+      task.status,
+      task.kind,
+      task.priority,
+      task.assignee,
+      task.parent,
+      task.updatedAt,
+      task.resolution,
+      task.dependsOn,
+      task.blockedBy,
+      task.related,
+    ]),
+  );
+}
+
+function taskLabel(task) {
+  return `${task.key}: ${task.title}`;
+}
+
+function arrayChanged(a, b) {
+  return JSON.stringify(a ?? []) !== JSON.stringify(b ?? []);
+}
+
+function buildChangeNotice(beforeTasks, afterTasks) {
+  const before = new Map(beforeTasks.map((task) => [task.key, task]));
+  const after = new Map(afterTasks.map((task) => [task.key, task]));
+  const details = [];
+
+  for (const task of afterTasks) {
+    if (!before.has(task.key)) details.push(`Added ${taskLabel(task)}`);
+  }
+  for (const task of beforeTasks) {
+    if (!after.has(task.key)) details.push(`Removed ${taskLabel(task)}`);
+  }
+  for (const task of afterTasks) {
+    const previous = before.get(task.key);
+    if (!previous) continue;
+    const detailCountBeforeTask = details.length;
+    if (previous.status !== task.status)
+      details.push(`${task.key}: status ${previous.status} → ${task.status}`);
+    if (previous.assignee !== task.assignee)
+      details.push(`${task.key}: assignee ${previous.assignee} → ${task.assignee}`);
+    if (previous.priority !== task.priority)
+      details.push(`${task.key}: priority ${previous.priority} → ${task.priority}`);
+    if (previous.title !== task.title) details.push(`${task.key}: title changed`);
+    if (previous.resolution !== task.resolution)
+      details.push(`${task.key}: resolution ${previous.resolution ?? "—"} → ${task.resolution ?? "—"}`);
+    if (
+      arrayChanged(previous.dependsOn, task.dependsOn) ||
+      arrayChanged(previous.blockedBy, task.blockedBy) ||
+      arrayChanged(previous.related, task.related)
+    )
+      details.push(`${task.key}: relationships changed`);
+    if (details.length === detailCountBeforeTask && previous.updatedAt !== task.updatedAt)
+      details.push(`${task.key}: metadata updated`);
+  }
+
+  const shownDetails = details.slice(0, 8);
+  const hiddenCount = Math.max(0, details.length - shownDetails.length);
+  return {
+    id: `change-${nextChangeNoticeNumber++}`,
+    createdAt: new Date().toISOString(),
+    summary: `${details.length || 1} task change${details.length === 1 ? "" : "s"} while this tab was inactive`,
+    details: shownDetails.length ? shownDetails : ["Task metadata changed"],
+    hiddenCount,
+  };
+}
+
+function setTabTasks(tab, tasks, { markChanged = false } = {}) {
+  const nextSnapshot = taskSnapshot(tasks);
+  const changed = tab.snapshot !== null && tab.snapshot !== nextSnapshot;
+  if (markChanged && changed) {
+    tab.changed = true;
+    tab.changeNotices.push(buildChangeNotice(tab.tasks, tasks));
+  }
+  tab.tasks = tasks;
+  tab.snapshot = nextSnapshot;
+  tab.updatedAt = new Date().toISOString();
+  tab.error = null;
+}
+
+function parseBody(raw) {
+  const withoutFrontmatter = raw.replace(/^---\n[\s\S]*?\n---\n?/, "").trim();
+  return withoutFrontmatter.split("\n---\n\n# Activity Log")[0].trim();
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function inlineMarkdownHtml(value) {
+  return escapeHtml(value)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '<a href="$2">$1</a>');
+}
+
+function markdownToHtml(markdown) {
+  const lines = String(markdown || "")
+    .replaceAll("\r\n", "\n")
+    .split("\n");
+  let html = "";
+  let inCode = false;
+  let inList = false;
+  for (const raw of lines) {
+    const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
+    if (line.startsWith("```")) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      if (inCode) {
+        html += "</code></pre>";
+        inCode = false;
+      } else {
+        html += "<pre><code>";
+        inCode = true;
+      }
+      continue;
+    }
+    if (inCode) {
+      html += escapeHtml(line) + "\n";
+      continue;
+    }
+    if (!line.trim()) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      continue;
+    }
+    if (line.startsWith("### ")) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += "<h3>" + inlineMarkdownHtml(line.slice(4)) + "</h3>";
+      continue;
+    }
+    if (line.startsWith("## ")) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += "<h2>" + inlineMarkdownHtml(line.slice(3)) + "</h2>";
+      continue;
+    }
+    if (line.startsWith("# ")) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += "<h1>" + inlineMarkdownHtml(line.slice(2)) + "</h1>";
+      continue;
+    }
+    if (line.startsWith("> ")) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      html += "<blockquote>" + inlineMarkdownHtml(line.slice(2)) + "</blockquote>";
+      continue;
+    }
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      if (!inList) {
+        html += "<ul>";
+        inList = true;
+      }
+      html += "<li>" + inlineMarkdownHtml(line.slice(2)) + "</li>";
+      continue;
+    }
+    if (inList) {
+      html += "</ul>";
+      inList = false;
+    }
+    html += "<p>" + inlineMarkdownHtml(line) + "</p>";
+  }
+  if (inList) html += "</ul>";
+  if (inCode) html += "</code></pre>";
+  return html || "<p>No description.</p>";
+}
+
+function sendState(extra = {}) {
+  if (!win || closed) return;
+  const tab = activeTab();
+  lastTasks = tab?.tasks ?? [];
+  const payload = JSON.stringify({
+    type: "state",
+    tasks: tab?.tasks ?? [],
+    statuses,
+    initialProject: tab?.initialProject ?? "ALL",
+    repo: tab?.repo ?? "",
+    tabs: tabSummaries(),
+    changeNotices: tab?.changeNotices ?? [],
+    updatedAt: tab?.updatedAt ?? new Date().toISOString(),
+    ...extra,
+  });
+  win.send(`window.applyState(${payload})`);
+}
+
+function sendToast(message, level = "info") {
+  if (!win || closed) return;
+  win.send(`window.showToast(${JSON.stringify({ message, level })})`);
+}
+
+function sendDetail(key, detail) {
+  if (!win || closed) return;
+  win.send(`window.showDetail(${JSON.stringify({ key, detail })})`);
+}
+
+async function refresh(extra = {}) {
+  if (loading || closed) return;
+  const tab = activeTab();
+  if (!tab) {
+    lastTasks = [];
+    sendState(extra);
+    return;
+  }
+
+  loading = true;
+  try {
+    setTabTasks(tab, await readTasks(tab.repo));
+    lastTasks = tab.tasks;
+    persistOpenRepos();
+    sendState(extra);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    tab.error = message;
+    sendToast(message, "error");
+    sendState({ error: message });
+  } finally {
+    loading = false;
+  }
+}
+
+async function showTaskDetail(key) {
+  const metadata = lastTasks.find((task) => task.key === key) ?? null;
+  try {
+    const { stdout } = await execTasks(["--format", "raw", "task", "show", key]);
+    {
+      const body = parseBody(stdout);
+      sendDetail(key, { metadata, body, bodyHtml: markdownToHtml(body), error: null });
+    }
+  } catch (error) {
+    {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("task detail failed", key, message);
+      sendDetail(key, {
+        metadata,
+        body: null,
+        bodyHtml:
+          "<p>Could not load body via task show:</p><pre><code>" +
+          escapeHtml(message) +
+          "</code></pre>",
+        error: message,
+      });
+    }
+  }
+}
+
+async function updateStatus(key, status) {
+  const task = lastTasks.find((candidate) => candidate.key === key);
+  if (!task) {
+    sendToast(`Task ${key} is no longer visible`, "error");
+    await refresh();
+    return;
+  }
+  if (task.status === status) return;
+  if (!statuses.some((candidate) => candidate.key === status)) {
+    sendToast(`Unsupported status: ${status}`, "error");
+    return;
+  }
+
+  const tab = activeTab();
+  if (!tab) {
+    sendToast("Open a repository before updating tasks", "error");
+    return;
+  }
+
+  tab.tasks = tab.tasks.map((candidate) =>
+    candidate.key === key ? { ...candidate, status } : candidate,
+  );
+  lastTasks = tab.tasks;
+  sendState({ pending: { key, status } });
+
+  try {
+    await execTasks(["task", "update", key, "--status", status]);
+    sendToast(`${key} → ${status.toLowerCase()}`, "success");
+  } catch (error) {
+    sendToast(error instanceof Error ? error.message : String(error), "error");
+  } finally {
+    await refresh();
+  }
+}
+
+async function runTaskAction(message) {
+  try {
+    if (message.action === "assign") {
+      await execTasks(["task", "update", message.key, "--assignee", message.assignee]);
+      sendToast(`${message.key} assigned to ${message.assignee}`, "success");
+    } else if (message.action === "pickup") {
+      await execTasks(["task", "pickup", message.key]);
+      sendToast(`${message.key} picked up`, "success");
+    } else if (message.action === "status") {
+      await updateStatus(message.key, message.status);
+      return;
+    } else if (message.action === "completeNeedsReview") {
+      await execTasks(["task", "complete", message.key]);
+      sendToast(`${message.key} moved to needs review`, "success");
+    } else if (message.action === "completeFinal") {
+      await execTasks([
+        "task",
+        "complete",
+        message.key,
+        "--final",
+        "--resolution",
+        message.resolution,
+      ]);
+      sendToast(`${message.key} completed (${message.resolution})`, "success");
+    }
+    await refresh();
+    if (message.key) void showTaskDetail(message.key);
+  } catch (error) {
+    sendToast(error instanceof Error ? error.message : String(error), "error");
+    await refresh();
+  }
+}
+
+async function createTask(payload) {
+  try {
+    const args = [
+      "task",
+      "create",
+      "-p",
+      payload.project,
+      "-t",
+      payload.title,
+      "-k",
+      payload.kind,
+      "--priority",
+      payload.priority,
+      "--reporter",
+      payload.reporter,
+    ];
+    if (payload.kind === "SUBTASK" && payload.parent) args.push("--parent", payload.parent);
+    const { stdout } = await execTasks(args);
+    const key = stdout.match(/[A-Z]+-[0-9]+/)?.[0];
+    if (!key) throw new Error(`Created task but could not parse key from: ${stdout}`);
+    if (payload.description?.trim()) {
+      await execTasks(["task", "update", key, "--desc", payload.description.trim()]);
+    }
+    if (payload.assignee && payload.assignee !== "UNASSIGNED") {
+      await execTasks(["task", "update", key, "--assignee", payload.assignee]);
+    }
+    sendToast(`Created ${key}`, "success");
+    await refresh();
+    void showTaskDetail(key);
+  } catch (error) {
+    sendToast(error instanceof Error ? error.message : String(error), "error");
+    await refresh();
+  }
+}
+
+function switchTab(tabId) {
+  const tab = tabs.find((candidate) => candidate.id === tabId);
+  if (!tab) return;
+  activeTabId = tab.id;
+  tab.changed = false;
+  lastTasks = tab.tasks;
+  sendState({ tabChanged: true });
+  void refresh({ tabChanged: true });
+}
+
+function reorderTab(tabId, beforeTabId) {
+  if (tabId === beforeTabId) return;
+  const from = tabs.findIndex((candidate) => candidate.id === tabId);
+  if (from < 0) return;
+  const [tab] = tabs.splice(from, 1);
+  const to = beforeTabId
+    ? tabs.findIndex((candidate) => candidate.id === beforeTabId)
+    : tabs.length;
+  tabs.splice(to < 0 ? tabs.length : to, 0, tab);
+  persistOpenRepos();
+  sendState({ tabChanged: true });
+}
+
+function dismissChangeNotice(noticeId) {
+  const tab = activeTab();
+  if (!tab) return;
+  tab.changeNotices = tab.changeNotices.filter((notice) => notice.id !== noticeId);
+  sendState();
+}
+
+function dismissAllChangeNotices() {
+  const tab = activeTab();
+  if (!tab || tab.changeNotices.length === 0) return;
+  tab.changeNotices = [];
+  tab.changed = false;
+  sendState();
+}
+
+async function refreshInactiveTabs() {
+  for (const tab of tabs) {
+    if (tab.id === activeTabId) continue;
+    try {
+      setTabTasks(tab, await readTasks(tab.repo), { markChanged: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      tab.error = message;
+    }
+  }
+  sendState();
+}
+
+function closeTab(tabId) {
+  const index = tabs.findIndex((candidate) => candidate.id === tabId);
+  if (index < 0) return;
+  const wasActive = tabs[index].id === activeTabId;
+  tabs.splice(index, 1);
+  if (wasActive) activeTabId = tabs[Math.max(0, index - 1)]?.id ?? tabs[0]?.id ?? null;
+  persistOpenRepos();
+  lastTasks = activeTab()?.tasks ?? [];
+  sendState({ tabChanged: true });
+  if (tabs.length) void refresh({ tabChanged: true });
+}
+
+async function addRepo(repoInput) {
+  try {
+    const repo = normalizeRepoPath(String(repoInput ?? "").trim());
+    assertRepoRoot(repo);
+    const existing = tabs.find((tab) => tab.repo === repo);
+    if (existing) {
+      activeTabId = existing.id;
+      switchTab(existing.id);
+      return true;
+    }
+
+    const tasks = await readTasks(repo);
+    const tab = createRepoTab(repo, "ALL");
+    setTabTasks(tab, tasks);
+    tabs.push(tab);
+    activeTabId = tab.id;
+    lastTasks = tasks;
+    persistOpenRepos();
+    sendToast(`Opened ${repo}`, "success");
+    sendState({ tabChanged: true });
+    return true;
+  } catch (error) {
+    sendToast(error instanceof Error ? error.message : String(error), "error");
+    return false;
+  }
+}
+
+async function browseRepo() {
+  try {
+    const paths = await win.pickDirectory({ title: "Choose a repository root" });
+    const repo = paths?.[0];
+    if (!repo) return;
+
+    win.send(
+      `(() => { const input = document.getElementById('repoRoot'); if (input) input.value = ${JSON.stringify(repo)}; })()`,
+    );
+    if (await addRepo(repo)) win.send("window.closeModal?.()");
+  } catch (error) {
+    sendToast(error instanceof Error ? error.message : String(error), "error");
+  }
+}
+
+function html() {
+  return `
+<body>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Avenir Next, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 14% 4%, rgba(245,158,11,.12), transparent 24%), radial-gradient(circle at 85% 0%, rgba(59,130,246,.18), transparent 28%), linear-gradient(135deg, #10131c 0%, #151827 56%, #101014 100%);
+      color: #e5e7eb;
+      padding: 48px 18px 18px;
+    }
+    .topbar { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 12px; }
+    .repo-tabs { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; overflow-x: auto; padding-bottom: 2px; }
+    .repo-tab { display: flex; align-items: center; gap: 8px; max-width: 320px; border-radius: 14px; padding: 7px 9px; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.12); color: #cbd5e1; }
+    .repo-tab.dragging { opacity: .45; }
+    .repo-tab.drop-before { box-shadow: -3px 0 0 #60a5fa; }
+    .repo-tab.active { color: white; border-color: rgba(96,165,250,.54); background: linear-gradient(135deg, rgba(59,130,246,.30), rgba(14,165,233,.12)); }
+    .repo-tab.changed:not(.active) { color: white; border-color: rgba(245,158,11,.62); background: linear-gradient(135deg, rgba(245,158,11,.26), rgba(59,130,246,.10)); }
+    .repo-tab.error { border-color: rgba(239,68,68,.45); }
+    .repo-tab .tab-main { display: flex; align-items: center; gap: 8px; min-width: 0; border: 0; background: transparent; color: inherit; padding: 2px 0; backdrop-filter: none; }
+    .repo-tab .tab-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .repo-tab .tab-count { font-size: 10px; color: #bfdbfe; border: 1px solid rgba(147,197,253,.28); border-radius: 999px; padding: 2px 6px; }
+    .repo-tab .tab-unread { width: 8px; height: 8px; border-radius: 999px; background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
+    .repo-tab .tab-close { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border-radius: 999px; color: #94a3b8; }
+    .repo-tab .tab-close:hover { color: #fecaca; border-color: rgba(239,68,68,.38); background: rgba(239,68,68,.16); }
+    h1 { margin: 0; font-size: 24px; letter-spacing: -0.045em; }
+    .subtitle { margin: 6px 0 0; color: #aaaeb8; font-size: 13px; line-height: 1.35; max-width: 940px; }
+    .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .pill, button, input, select, textarea {
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.08);
+      color: #d4d4d8;
+      border-radius: 999px;
+      padding: 8px 11px;
+      font-size: 12px;
+      backdrop-filter: blur(12px);
+    }
+    textarea { border-radius: 14px; min-height: 130px; resize: vertical; }
+    input, select, textarea { outline: none; color: #f4f4f5; }
+    input::placeholder, textarea::placeholder { color: #71717a; }
+    button { cursor: pointer; font-weight: 700; }
+    button:hover, .filter-chip:hover { background: rgba(255,255,255,.14); color: white; }
+    .danger-button { border-color: rgba(239,68,68,.35); color: #fecaca; }
+    .success-button { border-color: rgba(34,197,94,.35); color: #bbf7d0; }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+    .legend .chip { font-size: 11px; padding: 4px 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); }
+    .filter-panel { display: grid; grid-template-columns: minmax(260px, 1fr) auto auto auto auto; gap: 10px; align-items: center; margin-bottom: 14px; padding: 12px; border: 1px solid rgba(255,255,255,.10); border-radius: 18px; background: rgba(255,255,255,.045); backdrop-filter: blur(18px); }
+    .search { width: 100%; border-radius: 14px; padding: 10px 12px; font-size: 13px; }
+    .filter-group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .filter-chip { cursor: pointer; user-select: none; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.055); color: #cbd5e1; border-radius: 999px; padding: 7px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .filter-chip.active { color: white; border-color: rgba(96,165,250,.52); background: rgba(59,130,246,.22); }
+    .project-select { min-width: 110px; }
+    .change-notices { display: grid; gap: 10px; margin-bottom: 14px; }
+    .change-notice-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0 2px; color: #fde68a; font-size: 12px; }
+    .change-notice-toolbar button { padding: 6px 10px; border-color: rgba(245,158,11,.35); color: #fde68a; }
+    .change-notice { position: relative; border: 1px solid rgba(245,158,11,.30); background: linear-gradient(135deg, rgba(245,158,11,.13), rgba(59,130,246,.08)); border-radius: 18px; padding: 12px 42px 12px 14px; box-shadow: 0 14px 42px rgba(0,0,0,.18); }
+    .change-notice h3 { margin: 0 0 4px; color: #fde68a; font-size: 13px; }
+    .change-notice p { margin: 0 0 7px; color: #cbd5e1; font-size: 12px; }
+    .change-notice ul { margin: 0; padding-left: 18px; color: #e5e7eb; font-size: 12px; line-height: 1.45; }
+    .change-notice-close { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; border-radius: 999px; }
+    .warnings { display: none; margin-bottom: 14px; border: 1px solid rgba(245,158,11,.24); background: rgba(245,158,11,.08); border-radius: 18px; padding: 10px; }
+    .warnings.visible { display: block; }
+    .warning-title { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #fde68a; }
+    .warning-list { display: flex; gap: 8px; flex-wrap: wrap; }
+    .warning-chip { border: 1px solid rgba(245,158,11,.28); background: rgba(245,158,11,.10); color: #fef3c7; border-radius: 999px; padding: 7px 10px; font-size: 12px; cursor: pointer; }
+    .board { display: grid; gap: 14px; }
+    .lane { border: 1px solid rgba(255,255,255,.12); background: rgba(15,23,42,.54); border-radius: 18px; overflow: hidden; box-shadow: 0 18px 60px rgba(0,0,0,.22); backdrop-filter: blur(18px); }
+    .lane.collapsed { background: rgba(15,23,42,.42); }
+    .lane-header { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.10); background: linear-gradient(90deg, color-mix(in oklab, var(--priority-color) 13%, transparent), transparent 48%), rgba(255,255,255,.045); border-left: 6px solid var(--priority-color); }
+    .lane-header.top { --priority-color: #94a3b8; }
+    .lane-kicker { margin: 0 0 4px; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .lane-title { margin: 0; font-size: 14px; line-height: 1.25; }
+    .lane-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; min-width: 280px; }
+    .lane-collapse { width: 31px; height: 31px; padding: 0; display: grid; place-items: center; border-radius: 11px; font-size: 14px; }
+    .lane-body { display: grid; grid-template-columns: repeat(3, minmax(250px, 1fr)); }
+    .collapsed-summary { padding: 11px 14px; color: #a1a1aa; font-size: 12px; border-top: 1px solid rgba(255,255,255,.06); background: rgba(255,255,255,.028); }
+    .status-column { min-height: 138px; border-right: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; }
+    .status-column:last-child { border-right: 0; }
+    .status-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-top: 4px solid var(--status-color); border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(15,23,42,.88); font-size: 12px; font-weight: 800; letter-spacing: .01em; }
+    .cards { min-height: 96px; padding: 10px; display: grid; gap: 9px; align-content: start; flex: 1; }
+    .cards.drag-over { outline: 2px solid var(--status-color); outline-offset: -5px; background: rgba(255,255,255,.045); }
+    .empty { color: #737373; font-size: 12px; border: 1px dashed rgba(255,255,255,.12); border-radius: 13px; padding: 14px; text-align: center; }
+    .card { position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,.10); border-left: 5px solid var(--priority-color); background: linear-gradient(90deg, color-mix(in oklab, var(--priority-color) 15%, transparent), transparent 38%), linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035)); border-radius: 14px; padding: 0 13px 13px; cursor: pointer; user-select: none; transition: transform .12s ease, opacity .12s ease, border-color .12s ease, box-shadow .12s ease; }
+    .card:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.18); }
+    .drag-strip { margin: 0 -13px 12px; height: 20px; display: flex; align-items: center; justify-content: flex-end; padding: 0 8px; background: linear-gradient(90deg, color-mix(in oklab, var(--priority-color) 34%, rgba(255,255,255,.08)), rgba(255,255,255,.08)); border-bottom: 1px solid rgba(255,255,255,.10); cursor: grab; }
+    .drag-strip:active { cursor: grabbing; }
+    .drag-icon { font-size: 13px; line-height: 1; color: rgba(255,255,255,.86); text-shadow: 0 1px 8px rgba(0,0,0,.35); }
+    .card.has-corner .meta { padding-right: 96px; }
+    .card-tool { border-radius: 9px; padding: 6px 9px; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; background: rgba(59,130,246,.20); border-color: rgba(96,165,250,.46); color: #dbeafe; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); }
+    .card-tool:hover { background: rgba(59,130,246,.32); color: white; transform: translateY(-1px); }
+    .card-tool.subtask { background: rgba(34,197,94,.16); border-color: rgba(74,222,128,.40); color: #bbf7d0; }
+    .lane-tool { margin-left: 4px; }
+    .corner-tool { position: absolute; top: 28px; right: 9px; z-index: 2; }
+    .card.dragging { opacity: .50; transform: scale(.985); }
+    .card.highlighted { box-shadow: 0 0 0 2px rgba(250,204,21,.80), 0 0 34px rgba(250,204,21,.25); }
+    .card.kind-bug { box-shadow: inset 0 0 0 1px rgba(239,68,68,.18); }
+    .card.kind-task { box-shadow: inset 0 0 0 1px rgba(59,130,246,.14); }
+    .card.kind-subtask { box-shadow: inset 0 0 0 1px rgba(139,92,246,.16); }
+    .card.blocked { border-top-color: rgba(239,68,68,.40); }
+    .card.blocked::after { content: 'blocked'; position: absolute; right: 9px; top: 9px; color: #fecaca; font-size: 10px; text-transform: uppercase; letter-spacing: .07em; }
+    .meta { display: flex; gap: 7px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+    .badge { font-size: 11px; letter-spacing: .035em; text-transform: uppercase; color: #e5e7eb; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.10); border-radius: 999px; padding: 3px 6px; white-space: nowrap; }
+    .badge.key { color: white; background: rgba(59,130,246,.26); border-color: rgba(59,130,246,.48); }
+    .badge.project { color: white; background: rgba(20,184,166,.20); border-color: rgba(20,184,166,.42); }
+    .badge.kind { background: color-mix(in oklab, var(--kind-color) 22%, rgba(255,255,255,.07)); border-color: color-mix(in oklab, var(--kind-color) 46%, rgba(255,255,255,.10)); }
+    .badge.priority { background: color-mix(in oklab, var(--priority-color) 24%, rgba(255,255,255,.07)); border-color: color-mix(in oklab, var(--priority-color) 55%, rgba(255,255,255,.10)); }
+    .badge.assignee { background: rgba(255,255,255,.055); color: #cbd5e1; }
+    .badge.link { background: rgba(168,85,247,.14); border-color: rgba(168,85,247,.34); color: #e9d5ff; }
+    .card h3 { margin: 0; font-size: 14px; line-height: 1.35; }
+    .card .foot { margin-top: 11px; color: #a3a3a3; font-size: 12px; display: flex; justify-content: space-between; gap: 8px; }
+    .empty-board { border: 1px dashed rgba(255,255,255,.14); border-radius: 18px; padding: 42px; text-align: center; color: #a1a1aa; background: rgba(255,255,255,.035); }
+    .drawer { position: fixed; top: 0; right: 0; width: min(560px, 94vw); height: 100vh; background: rgba(12,16,27,.96); border-left: 1px solid rgba(255,255,255,.12); box-shadow: -24px 0 80px rgba(0,0,0,.45); transform: translateX(105%); transition: transform .18s ease; z-index: 20; padding: 18px; overflow: auto; backdrop-filter: blur(24px); }
+    .drawer.open { transform: translateX(0); }
+    .drawer-sash { position: absolute; left: 0; top: 0; bottom: 0; width: 10px; cursor: ew-resize; z-index: 3; background: linear-gradient(90deg, rgba(96,165,250,.26), transparent); opacity: .55; }
+    .drawer-sash:hover { opacity: 1; background: linear-gradient(90deg, rgba(96,165,250,.55), transparent); }
+    .drawer.loading { opacity: .92; }
+    .drawer-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+    .drawer h2 { margin: 0; font-size: 18px; line-height: 1.2; }
+    .section { border-top: 1px solid rgba(255,255,255,.10); padding-top: 12px; margin-top: 12px; }
+    .section h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #a5b4fc; }
+    .body-preview { color: #d4d4d8; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.10); border-radius: 14px; padding: 12px; max-height: 560px; overflow: auto; font-size: 14px; line-height: 1.5; }
+    .markdown h1, .markdown h2, .markdown h3 { margin: 12px 0 6px; color: #f8fafc; line-height: 1.2; }
+    .markdown h1 { font-size: 18px; } .markdown h2 { font-size: 15px; } .markdown h3 { font-size: 13px; color: #c7d2fe; }
+    .markdown p { margin: 7px 0; }
+    .markdown ul { margin: 7px 0 7px 18px; padding: 0; }
+    .markdown li { margin: 3px 0; }
+    .markdown code { background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.10); border-radius: 6px; padding: 1px 4px; color: #fde68a; }
+    .markdown pre { background: rgba(0,0,0,.30); border: 1px solid rgba(255,255,255,.10); border-radius: 12px; padding: 10px; overflow: auto; }
+    .markdown pre code { background: transparent; border: 0; padding: 0; color: #e5e7eb; }
+    .markdown blockquote { margin: 8px 0; padding-left: 10px; border-left: 3px solid rgba(96,165,250,.65); color: #cbd5e1; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .action-menu-wrap { position: relative; display: inline-block; }
+    .action-menu { display: none; position: absolute; left: 0; right: auto; top: calc(100% + 8px); min-width: 230px; padding: 8px; border: 1px solid rgba(255,255,255,.14); border-radius: 14px; background: rgba(15,23,42,.98); box-shadow: 0 20px 60px rgba(0,0,0,.45); z-index: 60; }
+    .action-menu.open { display: grid; gap: 6px; }
+    .action-menu button { width: 100%; text-align: left; border-radius: 10px; }
+    .relationship-link { color: #bfdbfe; border: 1px solid rgba(96,165,250,.26); background: rgba(59,130,246,.12); border-radius: 999px; padding: 3px 7px; margin: 2px 4px 2px 0; display: inline-block; cursor: pointer; text-decoration: none; }
+    .relationship-link:hover { background: rgba(59,130,246,.25); color: white; }
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.48); z-index: 30; align-items: center; justify-content: center; padding: 24px; }
+    .modal-backdrop.open { display: flex; }
+    .modal { width: min(720px, 94vw); max-height: 90vh; overflow: auto; background: rgba(12,16,27,.98); border: 1px solid rgba(255,255,255,.12); border-radius: 22px; box-shadow: 0 28px 90px rgba(0,0,0,.50); padding: 18px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+    .form-grid .wide { grid-column: 1 / -1; }
+    .form-grid label { display: grid; gap: 5px; color: #a1a1aa; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .input-row { display: flex; gap: 8px; align-items: center; }
+    .input-row input { flex: 1 1 auto; min-width: 0; }
+    .toast { position: fixed; right: 18px; bottom: 18px; max-width: 480px; border-radius: 14px; padding: 11px 13px; font-size: 13px; color: white; background: rgba(15,23,42,.94); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 18px 60px rgba(0,0,0,.34); opacity: 0; transform: translateY(8px); transition: opacity .16s ease, transform .16s ease; pointer-events: none; z-index: 50; }
+    .toast.visible { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: rgba(34,197,94,.50); }
+    .toast.error { border-color: rgba(239,68,68,.55); }
+    .footer { margin-top: 12px; color: #a3a3a3; font-size: 12px; display:flex; justify-content:space-between; gap: 12px; }
+    @media (max-width: 1120px) { .filter-panel { grid-template-columns: 1fr; } .lane { overflow-x: auto; } .lane-body { min-width: 980px; } .lane-header { min-width: 980px; } .form-grid { grid-template-columns: 1fr; } }
+  </style>
+
+  <div class="topbar">
+    <div>
+      <h1>Live Trail board</h1>
+      <p class="subtitle">Reusable task board for any repo with <code>.sandpiper/tasks</code>. Filter across project keys, click cards for details/actions, create tasks, and drag cards across status columns.</p>
+      <div class="legend"><span class="chip">🔥 HIGH</span><span class="chip">⚡ MEDIUM</span><span class="chip">🌱 LOW</span><span class="chip">🐞 BUG</span><span class="chip">📋 TASK</span><span class="chip">🧩 SUBTASK</span><span class="chip">⛓ relationships</span><span class="chip">🚫 blocked</span></div>
+    </div>
+    <div class="controls"><span class="pill" id="summary">Loading…</span><span class="pill" id="updated">—</span><button id="openRepo">Open repo</button><button id="newTask">New task</button><button id="refresh">Refresh now</button><button id="close">Close</button></div>
+  </div>
+
+  <nav class="repo-tabs" id="tabs" aria-label="Open task repositories"></nav>
+
+  <section class="filter-panel">
+    <input id="search" class="search" placeholder="Search keys, titles, assignees, relationships…  (press / to focus)" />
+    <select id="project" class="project-select"><option value="ALL">All projects</option></select>
+    <div id="kindFilters" class="filter-group"></div>
+    <div id="priorityFilters" class="filter-group"></div>
+    <div id="assigneeFilters" class="filter-group"></div>
+  </section>
+
+  <section id="changeNotices" class="change-notices"></section>
+  <section id="warnings" class="warnings"><p class="warning-title">Consistency warnings</p><div id="warningList" class="warning-list"></div></section>
+  <main class="board" id="board"></main>
+  <aside id="drawer" class="drawer"></aside>
+  <div id="modalBackdrop" class="modal-backdrop"><div class="modal" id="modal"></div></div>
+  <div class="footer"><span id="repoPath">Repo: —</span><span>Board process pid: <code>${process.pid}</code></span></div>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    let state = { tasks: [], statuses: [], initialProject: 'ALL', repo: '', tabs: [] };
+    let filters = { q: '', project: null, kinds: new Set(), priorities: new Set(), assignees: new Set() };
+    const collapsedLanesByTab = new Map();
+    function activeCollapsedLanes() { const active = (state.tabs || []).find(tab => tab.active); const key = active?.id || state.repo || '__initial__'; if (!collapsedLanesByTab.has(key)) collapsedLanesByTab.set(key, new Set()); return collapsedLanesByTab.get(key); }
+    let filtersInitialized = false;
+    let highlighted = new Set();
+    let currentDetailKey = null;
+    let pendingScrollKey = null;
+    let toastTimer = null;
+    const fallbackStatuses = ${JSON.stringify(statuses)};
+    const priorityInfo = { HIGH: { emoji: '🔥', color: '#ef4444' }, MEDIUM: { emoji: '⚡', color: '#f59e0b' }, LOW: { emoji: '🌱', color: '#22c55e' } };
+    const kindInfo = { BUG: { emoji: '🐞', color: '#ef4444' }, TASK: { emoji: '📋', color: '#3b82f6' }, SUBTASK: { emoji: '🧩', color: '#8b5cf6' } };
+    const assigneeEmoji = { AGENT: '🤖', USER: '👤', UNASSIGNED: '○' };
+    function esc(s) { return String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
+    function titleStatus(status) { return status.toLowerCase().replace(/(^| )\\w/g, c => c.toUpperCase()); }
+    function activeTasks() { return state.tasks.filter(task => task.status !== 'COMPLETE'); }
+    function byKey() { return new Map(state.tasks.map(task => [task.key, task])); }
+    function taskHaystack(task) { return [task.key, task.project, task.title, task.kind, task.priority, task.assignee, task.reporter, task.parent].concat(task.dependsOn || [], task.blockedBy || [], task.related || []).filter(Boolean).join(' ').toLowerCase(); }
+    function filteredActiveTasks() { const q = filters.q.trim().toLowerCase(); return activeTasks().filter(task => { if (filters.project && filters.project !== 'ALL' && task.project !== filters.project) return false; if (filters.kinds.size && !filters.kinds.has(task.kind)) return false; if (filters.priorities.size && !filters.priorities.has(task.priority)) return false; if (filters.assignees.size && !filters.assignees.has(task.assignee)) return false; if (q && !taskHaystack(task).includes(q)) return false; return true; }); }
+    function mapChildren(tasks) { const map = new Map(); for (const task of tasks) { if (!task.parent) continue; if (!map.has(task.parent)) map.set(task.parent, []); map.get(task.parent).push(task); } return map; }
+    function renderFilterControls() { const projects = [...new Set(state.tasks.map(task => task.project))].sort(); const projectSelect = document.getElementById('project'); const previousProject = filters.project ?? state.initialProject; projectSelect.innerHTML = '<option value="ALL">All projects</option>' + projects.map(project => '<option value="' + esc(project) + '">' + esc(project) + '</option>').join(''); filters.project = previousProject === 'ALL' ? 'ALL' : (projects.includes(previousProject) ? previousProject : (projects.includes(state.initialProject) ? state.initialProject : 'ALL')); projectSelect.value = filters.project; renderChipGroup('kindFilters', ['BUG', 'TASK', 'SUBTASK'], filters.kinds, kind => (kindInfo[kind]?.emoji ?? '') + ' ' + kind); renderChipGroup('priorityFilters', ['HIGH', 'MEDIUM', 'LOW'], filters.priorities, priority => (priorityInfo[priority]?.emoji ?? '') + ' ' + priority); const assignees = [...new Set(state.tasks.map(task => task.assignee))].sort(); renderChipGroup('assigneeFilters', assignees, filters.assignees, assignee => (assigneeEmoji[assignee] ?? '○') + ' ' + assignee); }
+    function renderChipGroup(id, values, selected, labelFor) { const el = document.getElementById(id); el.innerHTML = values.map(value => '<button class="filter-chip' + (selected.has(value) ? ' active' : '') + '" data-value="' + esc(value) + '" type="button">' + esc(labelFor(value)) + '</button>').join(''); el.querySelectorAll('.filter-chip').forEach(chip => chip.addEventListener('click', () => { const value = chip.dataset.value; if (selected.has(value)) selected.delete(value); else selected.add(value); render(); })); }
+    function renderTabs() { const tabs = state.tabs || []; const el = document.getElementById('tabs'); if (!tabs.length) { el.innerHTML = ''; return; } el.innerHTML = tabs.map(tab => '<div class="repo-tab' + (tab.active ? ' active' : '') + (tab.changed ? ' changed' : '') + (tab.error ? ' error' : '') + '" draggable="true" data-tab-shell-id="' + esc(tab.id) + '" title="' + esc(tab.repo) + '"><button class="tab-main" data-tab-id="' + esc(tab.id) + '" type="button"><span class="tab-label">' + esc(tab.label || tab.repo) + '</span><span class="tab-count">' + esc(tab.count ?? 0) + '</span>' + (tab.changed && !tab.active ? '<span class="tab-unread" title="Changed while inactive"></span>' : '') + '</button><button class="tab-close" data-close-tab-id="' + esc(tab.id) + '" type="button" title="Close tab">×</button></div>').join(''); el.querySelectorAll('[data-tab-id]').forEach(tab => tab.addEventListener('click', () => window.glimpse.send({ type: 'switchTab', tabId: tab.dataset.tabId }))); el.querySelectorAll('[data-close-tab-id]').forEach(button => button.addEventListener('click', event => { event.stopPropagation(); window.glimpse.send({ type: 'closeTab', tabId: button.dataset.closeTabId }); })); installTabDragHandlers(el); }
+    function consistencyWarnings() { const tasks = state.tasks; const map = byKey(); const warnings = []; for (const task of tasks) { if (task.parent) { const parent = map.get(task.parent); if (parent?.status === 'COMPLETE' && task.status !== 'COMPLETE') warnings.push({ key: task.key, text: task.key + ' active under complete parent ' + parent.key }); } if (task.status === 'NEEDS REVIEW' || task.status === 'COMPLETE') { for (const blocker of task.blockedBy || []) { const blockerTask = map.get(blocker); if (!blockerTask || blockerTask.status !== 'COMPLETE' || blockerTask.resolution !== 'DONE') warnings.push({ key: task.key, text: task.key + ' is ' + titleStatus(task.status) + ' with unresolved blocker ' + blocker }); } } } return warnings; }
+    function renderChangeNotices() { const box = document.getElementById('changeNotices'); const notices = state.changeNotices || []; if (!notices.length) { box.innerHTML = ''; return; } box.innerHTML = '<div class="change-notice-toolbar"><span>' + notices.length + ' unread change notice' + (notices.length === 1 ? '' : 's') + '</span><button id="markAllChangeNoticesRead" type="button">Mark all as read</button></div>' + notices.map(notice => '<article class="change-notice"><button class="change-notice-close" data-dismiss-change="' + esc(notice.id) + '" type="button" title="Dismiss">×</button><h3>Changes while you were away</h3><p>' + esc(notice.summary) + ' • ' + esc(new Date(notice.createdAt).toLocaleTimeString()) + '</p><ul>' + (notice.details || []).map(detail => '<li>' + esc(detail) + '</li>').join('') + (notice.hiddenCount ? '<li>…and ' + esc(notice.hiddenCount) + ' more</li>' : '') + '</ul></article>').join(''); document.getElementById('markAllChangeNoticesRead')?.addEventListener('click', () => window.glimpse.send({ type: 'dismissAllChangeNotices' })); box.querySelectorAll('[data-dismiss-change]').forEach(button => button.addEventListener('click', () => window.glimpse.send({ type: 'dismissChangeNotice', noticeId: button.dataset.dismissChange }))); }
+    function renderWarnings() { const box = document.getElementById('warnings'); const list = document.getElementById('warningList'); const warnings = consistencyWarnings(); box.classList.toggle('visible', warnings.length > 0); list.innerHTML = warnings.map(w => '<button class="warning-chip" data-key="' + esc(w.key) + '">⚠ ' + esc(w.text) + '</button>').join(''); list.querySelectorAll('.warning-chip').forEach(chip => chip.addEventListener('click', () => focusKey(chip.dataset.key))); }
+    function installTabDragHandlers(container) { container.querySelectorAll('[data-tab-shell-id]').forEach(tab => { tab.addEventListener('dragstart', event => { event.dataTransfer.setData('text/plain', tab.dataset.tabShellId); event.dataTransfer.effectAllowed = 'move'; tab.classList.add('dragging'); }); tab.addEventListener('dragend', () => { tab.classList.remove('dragging'); container.querySelectorAll('.drop-before').forEach(el => el.classList.remove('drop-before')); }); tab.addEventListener('dragover', event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; container.querySelectorAll('.drop-before').forEach(el => el.classList.remove('drop-before')); tab.classList.add('drop-before'); }); tab.addEventListener('dragleave', () => tab.classList.remove('drop-before')); tab.addEventListener('drop', event => { event.preventDefault(); event.stopPropagation(); tab.classList.remove('drop-before'); const dragged = event.dataTransfer.getData('text/plain'); if (dragged) window.glimpse.send({ type: 'reorderTab', tabId: dragged, beforeTabId: tab.dataset.tabShellId }); }); }); container.addEventListener('dragover', event => { event.preventDefault(); }); container.addEventListener('drop', event => { if (event.target.closest('[data-tab-shell-id]')) return; event.preventDefault(); const dragged = event.dataTransfer.getData('text/plain'); if (dragged) window.glimpse.send({ type: 'reorderTab', tabId: dragged, beforeTabId: null }); }); }
+    function render() { if (!filtersInitialized) { filters.project = state.initialProject ?? 'ALL'; document.getElementById('search').value = filters.q; filtersInitialized = true; } renderTabs(); renderFilterControls(); renderChangeNotices(); renderWarnings(); document.getElementById('repoPath').textContent = state.repo ? 'Repo: ' + state.repo : 'Repo: —'; const board = document.getElementById('board'); if (!(state.tabs || []).length) { board.innerHTML = '<div class="empty-board"><h2>No repositories open</h2><p>Use Open repo to browse for a repository with <code>.sandpiper/tasks</code>.</p></div>'; document.getElementById('summary').textContent = 'No repos open'; return; } const statuses = state.statuses.length ? state.statuses : fallbackStatuses; const active = filteredActiveTasks(); const allChildrenByParent = mapChildren(state.tasks); const visibleChildrenByParent = mapChildren(active); const parentByKey = byKey(); const activeTopLevel = active.filter(task => !task.parent && task.kind !== 'SUBTASK'); const standalone = activeTopLevel.filter(task => !(allChildrenByParent.get(task.key)?.length)); const parentKeys = [...visibleChildrenByParent.keys()]; const lanes = [{ type: 'standalone', key: 'standalone', tasks: standalone }].concat(parentKeys.map(key => ({ type: 'parent', key, parent: parentByKey.get(key), tasks: visibleChildrenByParent.get(key) || [] })).filter(lane => lane.parent)).filter(lane => lane.tasks.length || lane.type === 'standalone'); if (!active.length) board.innerHTML = '<div class="empty-board"><h2>No active tasks match these filters</h2><p>Try broadening project, search, kind, priority, or assignee.</p></div>'; else board.innerHTML = lanes.map(lane => laneHTML(lane, statuses)).join(''); installLaneToggles(); installDragHandlers(); if (pendingScrollKey) { const key = pendingScrollKey; pendingScrollKey = null; scrollCardIntoView(key); } const counts = Object.fromEntries(statuses.map(status => [status.key, active.filter(task => task.status === status.key).length])); document.getElementById('summary').textContent = active.length + ' visible • ' + (counts['NOT STARTED'] || 0) + ' todo • ' + (counts['IN PROGRESS'] || 0) + ' doing • ' + (counts['NEEDS REVIEW'] || 0) + ' review'; }
+    function laneHTML(lane, statuses) { const collapsed = activeCollapsedLanes().has(lane.key); const body = collapsed ? '<div class="collapsed-summary">' + lane.tasks.length + ' cards hidden in this row.</div>' : '<div class="lane-body">' + statuses.map(status => statusColumnHTML(lane, status, lane.tasks.filter(task => task.status === status.key))).join('') + '</div>'; return '<section class="lane' + (collapsed ? ' collapsed' : '') + '">' + laneHeaderHTML(lane, collapsed) + body + '</section>'; }
+    function laneHeaderHTML(lane, collapsed) { const toggle = '<button class="lane-collapse" data-toggle-lane="' + esc(lane.key) + '" type="button" title="' + (collapsed ? 'Expand row' : 'Collapse row') + '">' + (collapsed ? '▸' : '▾') + '</button>'; if (lane.type === 'standalone') return '<header class="lane-header top"><div><p class="lane-kicker">Standalone swimlane</p><h2 class="lane-title">📌 Tasks/Bugs without subtasks</h2></div><div class="lane-meta"><span class="badge">' + lane.tasks.length + ' cards</span><span class="badge">Click for details</span><span class="badge">Use ↕ to drag</span>' + toggle + '</div></header>'; const task = lane.parent; const priority = priorityInfo[task.priority] || priorityInfo.LOW; const kind = kindInfo[task.kind] || kindInfo.TASK; const assignee = assigneeEmoji[task.assignee] || '○'; return '<header class="lane-header" style="--priority-color:' + priority.color + '; --kind-color:' + kind.color + '"><div><p class="lane-kicker">Parent swimlane • ' + esc(task.project) + ' • ' + esc(titleStatus(task.status)) + '</p><h2 class="lane-title">' + esc(task.title) + '</h2></div><div class="lane-meta"><span class="badge project">' + esc(task.project) + '</span><span class="badge key">' + esc(task.key) + '</span><span class="badge kind">' + kind.emoji + ' ' + esc(task.kind) + '</span><span class="badge priority">' + priority.emoji + ' ' + esc(task.priority) + '</span><span class="badge assignee">' + assignee + ' ' + esc(task.assignee) + '</span><span class="badge">' + lane.tasks.length + ' children</span><button class="card-tool subtask lane-tool" data-add-subtask="' + esc(task.key) + '" type="button">Add subtask</button>' + toggle + '</div></header>'; }
+    function statusColumnHTML(lane, status, tasks) { return '<section class="status-column" style="--status-color:' + esc(status.accent) + '"><div class="status-head"><span>' + esc(status.title) + '</span><span>' + tasks.length + '</span></div><div class="cards" data-status="' + esc(status.key) + '" data-lane="' + esc(lane.key) + '" style="--status-color:' + esc(status.accent) + '">' + (tasks.length ? tasks.map(cardHTML).join('') : '<div class="empty">Drop cards here</div>') + '</div></section>'; }
+    function cardHTML(task) { const priority = priorityInfo[task.priority] || priorityInfo.LOW; const kind = kindInfo[task.kind] || kindInfo.TASK; const assignee = assigneeEmoji[task.assignee] || '○'; const relationCount = (task.dependsOn?.length || 0) + (task.blockedBy?.length || 0) + (task.related?.length || 0); const blocked = (task.blockedBy?.length || 0) > 0; const hi = highlighted.has(task.key) ? ' highlighted' : ''; const canHaveSubtasks = task.kind !== 'SUBTASK'; return '<article class="card ' + (canHaveSubtasks ? 'has-corner ' : '') + 'kind-' + esc(String(task.kind).toLowerCase()) + (blocked ? ' blocked' : '') + hi + '" data-key="' + esc(task.key) + '" style="--priority-color:' + priority.color + '; --kind-color:' + kind.color + '" title="Click for details: ' + esc(task.title) + '"><div class="drag-strip" draggable="true" data-key="' + esc(task.key) + '" title="Drag to change status"><span class="drag-icon">✥</span></div>' + (canHaveSubtasks ? '<button class="card-tool subtask corner-tool" data-add-subtask="' + esc(task.key) + '" type="button">+ Subtask</button>' : '') + '<div class="meta"><span class="badge project">' + esc(task.project) + '</span><span class="badge key">' + esc(task.key) + '</span><span class="badge kind">' + kind.emoji + ' ' + esc(task.kind) + '</span><span class="badge priority">' + priority.emoji + ' ' + esc(task.priority) + '</span><span class="badge assignee">' + assignee + ' ' + esc(task.assignee) + '</span>' + (relationCount ? '<span class="badge link">⛓ ' + relationCount + '</span>' : '') + '</div><h3>' + esc(task.title) + '</h3><div class="foot"><span>' + esc(task.parent ? 'child of ' + task.parent : 'top-level') + '</span><span>' + esc(titleStatus(task.status)) + '</span></div></article>'; }
+    function openTaskDetail(key) { const drawer = document.getElementById('drawer'); if (drawer.classList.contains('open') && currentDetailKey === key && !drawer.classList.contains('loading')) { closeDrawer(); return; } currentDetailKey = key; const task = state.tasks.find(t => t.key === key); if (task) renderDrawer(task, '<p>Loading description…</p>', true); window.glimpse.send({ type: 'showTaskDetail', key }); }
+    function installLaneToggles() { document.querySelectorAll('[data-toggle-lane]').forEach(button => button.addEventListener('click', event => { event.stopPropagation(); const key = button.dataset.toggleLane; if (!key) return; const collapsedLanes = activeCollapsedLanes(); if (collapsedLanes.has(key)) collapsedLanes.delete(key); else collapsedLanes.add(key); render(); })); }
+    function installDragHandlers() { document.querySelectorAll('.drag-strip').forEach(handle => { handle.addEventListener('click', event => event.stopPropagation()); handle.addEventListener('dragstart', event => { const card = handle.closest('.card'); event.dataTransfer.setData('text/plain', handle.dataset.key); event.dataTransfer.effectAllowed = 'move'; if (card) { const rect = card.getBoundingClientRect(); event.dataTransfer.setDragImage(card, Math.min(24, rect.width / 2), Math.min(24, rect.height / 2)); card.classList.add('dragging'); } }); handle.addEventListener('dragend', () => handle.closest('.card')?.classList.remove('dragging')); }); document.querySelectorAll('.card').forEach(card => { card.addEventListener('click', event => { if (event.target.closest('button') || event.target.closest('.drag-strip')) return; openTaskDetail(card.dataset.key); }); }); document.querySelectorAll('[data-detail-key]').forEach(button => button.addEventListener('click', event => { event.stopPropagation(); openTaskDetail(button.dataset.detailKey); })); document.querySelectorAll('[data-add-subtask]').forEach(button => button.addEventListener('click', event => { event.stopPropagation(); openNewTaskModal({ kind: 'SUBTASK', parent: button.dataset.addSubtask }); })); document.querySelectorAll('.cards').forEach(zone => { zone.addEventListener('dragover', event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; zone.classList.add('drag-over'); }); zone.addEventListener('dragleave', () => zone.classList.remove('drag-over')); zone.addEventListener('drop', event => { event.preventDefault(); zone.classList.remove('drag-over'); const key = event.dataTransfer.getData('text/plain'); const status = zone.dataset.status; if (key && status) window.glimpse.send({ type: 'updateStatus', key, status }); }); }); }
+    function badges(task) { const priority = priorityInfo[task.priority] || priorityInfo.LOW; const kind = kindInfo[task.kind] || kindInfo.TASK; const assignee = assigneeEmoji[task.assignee] || '○'; return '<div class="meta" style="--priority-color:' + priority.color + '; --kind-color:' + kind.color + '"><span class="badge project">' + esc(task.project) + '</span><span class="badge key">' + esc(task.key) + '</span><span class="badge kind">' + kind.emoji + ' ' + esc(task.kind) + '</span><span class="badge priority">' + priority.emoji + ' ' + esc(task.priority) + '</span><span class="badge assignee">' + assignee + ' ' + esc(task.assignee) + '</span><span class="badge link">' + esc(titleStatus(task.status)) + '</span></div>'; }
+    function actionMenuHTML(task) { const addSubtask = task.kind !== 'SUBTASK' ? '<button data-action="addSubtask">+ Add subtask</button>' : ''; return '<div class="action-menu-wrap"><button data-action-toggle type="button">Quick actions ▾</button><div class="action-menu"><button data-action="pickup">Pickup</button><button data-action="assign" data-assignee="AGENT">Assign AGENT</button><button data-action="assign" data-assignee="USER">Assign USER</button><button data-action="assign" data-assignee="UNASSIGNED">Unassign</button><button data-action="status" data-status="NOT STARTED">Move to not started</button><button data-action="status" data-status="IN PROGRESS">Move to in progress</button><button data-action="completeNeedsReview">Move to needs review</button>' + addSubtask + '<button class="success-button" data-action="completeFinal" data-resolution="DONE">Complete DONE</button><button class="danger-button" data-action="completeFinal" data-resolution="WONTFIX">Complete WONTFIX</button></div></div>'; }
+    function setupDrawerResize(drawer) { const sash = drawer.querySelector('.drawer-sash'); if (!sash) return; sash.addEventListener('mousedown', event => { event.preventDefault(); const startX = event.clientX; const startWidth = drawer.getBoundingClientRect().width; const onMove = move => { const width = Math.max(380, Math.min(window.innerWidth * 0.88, startWidth + (startX - move.clientX))); drawer.style.width = width + 'px'; }; const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }; window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); }); }
+    function renderDrawer(task, bodyHtml, loading = false) { const drawer = document.getElementById('drawer'); drawer.innerHTML = '<div class="drawer-sash" title="Drag to resize"></div><div class="drawer-head"><div><h2>' + esc(task.title) + '</h2></div><button data-close-drawer>Close</button></div>' + badges(task) + '<div class="section"><h3>Quick actions</h3><div class="actions">' + actionMenuHTML(task) + '</div></div><div class="section"><h3>Relationships</h3>' + relationshipHTML(task) + '</div><div class="section"><h3>Description preview</h3><div class="body-preview markdown">' + bodyHtml + '</div></div><div class="section"><h3>Timestamps</h3><p>Created: ' + esc(task.createdAt || 'unknown') + '<br/>Updated: ' + esc(task.updatedAt || 'unknown') + '<br/>Reporter: ' + esc(task.reporter) + '</p></div>'; setupDrawerResize(drawer); drawer.querySelector('[data-close-drawer]').addEventListener('click', closeDrawer); const menu = drawer.querySelector('.action-menu'); drawer.querySelector('[data-action-toggle]').addEventListener('click', event => { event.stopPropagation(); menu.classList.toggle('open'); }); drawer.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => { const action = button.dataset.action; menu?.classList.remove('open'); if (action === 'assign') taskAction('assign', { assignee: button.dataset.assignee }); else if (action === 'status') taskAction('status', { status: button.dataset.status }); else if (action === 'completeFinal') completeFinal(button.dataset.resolution); else if (action === 'addSubtask') openNewTaskModal({ kind: 'SUBTASK', parent: task.key }); else taskAction(action); })); drawer.querySelectorAll('[data-rel-key]').forEach(link => link.addEventListener('click', event => { event.preventDefault(); openLinkedTask(link.dataset.relKey); })); drawer.classList.toggle('loading', loading); drawer.classList.add('open'); }
+    function showDetail(payload) { const task = payload.detail.metadata || state.tasks.find(t => t.key === payload.key); if (!task) return; currentDetailKey = task.key; highlighted = new Set([task.key].concat(task.parent ? [task.parent] : [], task.dependsOn || [], task.blockedBy || [], task.related || [], state.tasks.filter(t => t.parent === task.key).map(t => t.key))); render(); renderDrawer(task, payload.detail.bodyHtml || renderMarkdown(payload.detail.body || 'No description.'), false); }
+    function relationshipHTML(task) { const link = key => '<a href="#" class="relationship-link" data-rel-key="' + esc(key) + '">' + esc(key) + '</a>'; const rows = []; if (task.parent) rows.push('<strong>Parent:</strong> ' + link(task.parent)); if (task.dependsOn?.length) rows.push('<strong>Depends on:</strong> ' + task.dependsOn.map(link).join(' ')); if (task.blockedBy?.length) rows.push('<strong>Blocked by:</strong> ' + task.blockedBy.map(link).join(' ')); if (task.related?.length) rows.push('<strong>Related:</strong> ' + task.related.map(link).join(' ')); const children = state.tasks.filter(t => t.parent === task.key).map(t => t.key); if (children.length) rows.push('<strong>Children:</strong> ' + children.map(link).join(' ')); return rows.length ? '<p>' + rows.join('<br/>') + '</p>' : '<p style="color:#a1a1aa">No relationships.</p>'; }
+    window.showDetail = showDetail;
+    function closeDrawer() { document.getElementById('drawer').classList.remove('open'); highlighted = new Set(); render(); }
+    window.closeDrawer = closeDrawer;
+    window.taskAction = (action, extra = {}) => { if (!currentDetailKey) return; window.glimpse.send({ type: 'taskAction', action, key: currentDetailKey, ...extra }); };
+    window.completeFinal = (resolution) => { const key = currentDetailKey; const modal = document.getElementById('modal'); modal.innerHTML = '<div class="drawer-head"><h2>Complete ' + esc(key) + '</h2><button data-cancel-complete>Close</button></div><p>Complete this task with resolution <strong>' + esc(resolution) + '</strong>?</p><div class="actions section"><button class="success-button" data-confirm-complete>Complete ' + esc(resolution) + '</button><button data-cancel-complete>Cancel</button></div>'; document.getElementById('modalBackdrop').classList.add('open'); modal.querySelector('[data-confirm-complete]').addEventListener('click', () => { closeModal(); taskAction('completeFinal', { resolution }); }); modal.querySelectorAll('[data-cancel-complete]').forEach(button => button.addEventListener('click', closeModal)); };
+    function findCard(key) { return [...document.querySelectorAll('.card')].find(card => card.dataset.key === key) || null; }
+    function clearNarrowFiltersForTask(task) { filters.q = ''; filters.kinds.clear(); filters.priorities.clear(); filters.assignees.clear(); if (task?.project) filters.project = task.project; document.getElementById('search').value = ''; render(); }
+    function scrollCardIntoView(key) { requestAnimationFrame(() => { setTimeout(() => { const card = findCard(key); if (!card) return; const rect = card.getBoundingClientRect(); const drawer = document.getElementById('drawer'); const drawerWidth = drawer.classList.contains('open') ? drawer.getBoundingClientRect().width : 0; const visibleWidth = Math.max(320, window.innerWidth - drawerWidth); const targetTop = window.scrollY + rect.top - Math.max(80, (window.innerHeight - rect.height) / 2); const targetLeft = window.scrollX + rect.left - Math.max(24, (visibleWidth - rect.width) / 2); window.scrollTo({ top: Math.max(0, targetTop), left: Math.max(0, targetLeft), behavior: 'smooth' }); card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); card.classList.add('highlighted'); setTimeout(() => card.classList.remove('highlighted'), 2200); }, 120); }); }
+    function openLinkedTask(key) { const task = state.tasks.find(t => t.key === key); if (!findCard(key) && task?.status !== 'COMPLETE') { pendingScrollKey = key; clearNarrowFiltersForTask(task); } if (!findCard(key) && task?.status === 'COMPLETE') showToast({ message: key + ' is complete and is not shown on the active board', level: 'info' }); pendingScrollKey = key; openTaskDetail(key); scrollCardIntoView(key); }
+    function focusKey(key) { openLinkedTask(key); }
+    function openRepoModal() { const modal = document.getElementById('modal'); modal.innerHTML = '<div class="drawer-head"><h2>Open repository</h2><button onclick="closeModal()">Close</button></div><p style="color:#a1a1aa">Choose or enter the repository root. Do not choose the <code>.sandpiper/tasks</code> directory.</p><div class="form-grid"><label class="wide">Repository root<div class="input-row"><input id="repoRoot" placeholder="/Users/doug.stephen/git/project" /><button type="button" onclick="browseRepo()">Browse…</button></div></label></div><div class="actions section"><button class="success-button" onclick="submitOpenRepo()">Open repo</button><button onclick="closeModal()">Cancel</button></div>'; document.getElementById('modalBackdrop').classList.add('open'); document.getElementById('repoRoot').focus(); }
+    window.browseRepo = () => window.glimpse.send({ type: 'browseRepo' });
+    window.submitOpenRepo = () => { const repo = document.getElementById('repoRoot').value.trim(); if (!repo) return showToast({ message: 'Repository root is required', level: 'error' }); window.glimpse.send({ type: 'addRepo', repo }); closeModal(); };
+    function openNewTaskModal(prefill = {}) { if (!state.repo) return showToast({ message: 'Open a repo before creating tasks', level: 'error' }); const projects = [...new Set(state.tasks.map(t => t.project))].sort(); const activeParents = state.tasks.filter(t => !t.parent && t.kind !== 'SUBTASK'); const parentTask = prefill.parent ? state.tasks.find(t => t.key === prefill.parent) : null; const modal = document.getElementById('modal'); modal.innerHTML = '<div class="drawer-head"><h2>New task</h2><button onclick="closeModal()">Close</button></div><div class="form-grid"><label>Project<select id="newProject">' + projects.map(p => '<option value="' + esc(p) + '"' + (((prefill.project || parentTask?.project || (filters.project !== 'ALL' ? filters.project : '')) === p) ? ' selected' : '') + '>' + esc(p) + '</option>').join('') + '</select></label><label>Kind<select id="newKind"><option>TASK</option><option>BUG</option><option>SUBTASK</option></select></label><label>Priority<select id="newPriority"><option>HIGH</option><option selected>MEDIUM</option><option>LOW</option></select></label><label>Assignee<select id="newAssignee"><option selected>UNASSIGNED</option><option>AGENT</option><option>USER</option></select></label><label>Reporter<select id="newReporter"><option selected>USER</option><option>AGENT</option></select></label><label>Parent (for SUBTASK)<select id="newParent"><option value="">—</option>' + activeParents.map(t => '<option value="' + esc(t.key) + '"' + (prefill.parent === t.key ? ' selected' : '') + '>' + esc(t.key + ' — ' + t.title) + '</option>').join('') + '</select></label><label class="wide">Title<input id="newTitle" placeholder="Task title" /></label><label class="wide">Description<textarea id="newDesc" placeholder="Optional description; current CLI creates first, then updates description."></textarea></label></div><div class="actions section"><button class="success-button" onclick="submitNewTask()">Create task</button><button onclick="closeModal()">Cancel</button></div>'; if (prefill.kind) document.getElementById('newKind').value = prefill.kind; if (prefill.priority) document.getElementById('newPriority').value = prefill.priority; if (prefill.title) document.getElementById('newTitle').value = prefill.title; document.getElementById('modalBackdrop').classList.add('open'); document.getElementById('newTitle').focus(); }
+    function closeModal() { document.getElementById('modalBackdrop').classList.remove('open'); }
+    window.closeModal = closeModal;
+    window.submitNewTask = () => { const payload = { project: document.getElementById('newProject').value, kind: document.getElementById('newKind').value, priority: document.getElementById('newPriority').value, assignee: document.getElementById('newAssignee').value, reporter: document.getElementById('newReporter').value, parent: document.getElementById('newParent').value, title: document.getElementById('newTitle').value.trim(), description: document.getElementById('newDesc').value }; if (!payload.title) return showToast({ message: 'Title is required', level: 'error' }); if (payload.kind === 'SUBTASK' && !payload.parent) return showToast({ message: 'Subtasks need a parent', level: 'error' }); window.glimpse.send({ type: 'createTask', payload }); closeModal(); };
+    window.applyState = (next) => { const repoChanged = state.repo && state.repo !== next.repo; state = next; if (repoChanged || next.tabChanged) { filters = { q: '', project: next.initialProject ?? 'ALL', kinds: new Set(), priorities: new Set(), assignees: new Set() }; document.getElementById('search').value = ''; filtersInitialized = false; highlighted = new Set(); currentDetailKey = null; closeModal(); closeDrawer(); } render(); const updated = new Date(next.updatedAt || Date.now()); document.getElementById('updated').textContent = 'Updated ' + updated.toLocaleTimeString(); if (next.error) showToast({ message: next.error, level: 'error' }); };
+    window.showToast = ({ message, level = 'info' }) => { const toast = document.getElementById('toast'); toast.textContent = message; toast.className = 'toast visible ' + level; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toast.className = 'toast ' + level; }, 2600); };
+    document.getElementById('search').addEventListener('input', event => { filters.q = event.target.value; render(); });
+    document.getElementById('project').addEventListener('change', event => { filters.project = event.target.value; render(); });
+    document.getElementById('refresh').addEventListener('click', () => window.glimpse.send({ type: 'refresh' }));
+    document.getElementById('openRepo').addEventListener('click', openRepoModal);
+    document.getElementById('newTask').addEventListener('click', openNewTaskModal);
+    document.getElementById('close').addEventListener('click', () => window.glimpse.close());
+    function isEditableElement(element) { if (!element) return false; const tag = element.tagName; return element.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'; }
+    document.addEventListener('keydown', event => { const search = document.getElementById('search'); if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a' && document.activeElement === search) { event.preventDefault(); search.select(); return; } if (event.key === '/' && !isEditableElement(document.activeElement)) { event.preventDefault(); search.focus(); } if (event.key === 'Escape') { closeModal(); closeDrawer(); } if (event.key === 'r' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); window.glimpse.send({ type: 'refresh' }); } });
+  </script>
+</body>`;
+}
+
+win = open(html(), {
+  width: 1360,
+  height: 900,
+  title: "Live Trail board",
+  titlebarStyleOptions: ["unified-compact", "titlebar-transparent"],
+});
+
+win.on("ready", () => {
+  void refresh();
+});
+
+win.on("message", (message) => {
+  if (!message || typeof message !== "object") return;
+  if (message.type === "refresh") void refresh({ manual: true });
+  if (
+    message.type === "updateStatus" &&
+    typeof message.key === "string" &&
+    typeof message.status === "string"
+  )
+    void updateStatus(message.key, message.status);
+  if (message.type === "showTaskDetail" && typeof message.key === "string")
+    void showTaskDetail(message.key);
+  if (message.type === "taskAction") void runTaskAction(message);
+  if (message.type === "createTask") void createTask(message.payload);
+  if (message.type === "switchTab" && typeof message.tabId === "string") switchTab(message.tabId);
+  if (message.type === "closeTab" && typeof message.tabId === "string") closeTab(message.tabId);
+  if (message.type === "reorderTab" && typeof message.tabId === "string")
+    reorderTab(message.tabId, typeof message.beforeTabId === "string" ? message.beforeTabId : null);
+  if (message.type === "dismissChangeNotice" && typeof message.noticeId === "string")
+    dismissChangeNotice(message.noticeId);
+  if (message.type === "dismissAllChangeNotices") dismissAllChangeNotices();
+  if (message.type === "browseRepo") void browseRepo();
+  if (message.type === "addRepo" && typeof message.repo === "string") void addRepo(message.repo);
+});
+
+win.on("closed", () => {
+  closed = true;
+  process.exit(0);
+});
+
+const interval = setInterval(() => {
+  void refresh();
+  void refreshInactiveTabs();
+}, POLL_MS);
+
+process.on("SIGTERM", () => {
+  clearInterval(interval);
+  closed = true;
+  try {
+    win?.close();
+  } catch {}
+  process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  clearInterval(interval);
+  closed = true;
+  try {
+    win?.close();
+  } catch {}
+  process.exit(0);
+});

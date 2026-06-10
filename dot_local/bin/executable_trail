@@ -2,7 +2,9 @@
 
 if [ "$1" = "board" ]; then
     shift
-    nohup mise exec bun -- bun run --bun "$HOME/.sandpiper/agent/skills-archive/glimpse-task-board/scripts/task-board.mjs" "$@" >"${XDG_STATE_HOME:-$HOME/.local/state}/sandpiper/taskboard.stdout" 2>"${XDG_STATE_HOME:-$HOME/.local/state}/sandpiper/taskboard.stderr" &
+    STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/sandpiper"
+    mkdir -p "$STATE_DIR"
+    nohup "$HOME/.local/bin/task-board" "$@" >"$STATE_DIR/taskboard.stdout" 2>"$STATE_DIR/taskboard.stderr" &
     exit
 fi
 
