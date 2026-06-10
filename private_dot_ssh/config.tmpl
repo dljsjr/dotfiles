@@ -6,7 +6,7 @@ Host GameBox
   AddressFamily inet
   User "dstephen"
   HostName 198.74.53.143
-  IdentityFile ~/.ssh/{{ if eq .chezmoi.os "darwin" }}id_ed25519.pub{{ else }}id_{{ .chezmoi.hostname }}{{ end }}
+  IdentityFile ~/.ssh/id_ed25519{{ if eq .chezmoi.os "darwin" }}.pub{{ end }}
   AddKeysToAgent yes
   ForwardAgent yes
 
@@ -14,7 +14,7 @@ Host Jox
   AddressFamily inet
   User "dstephen"
   HostName "jox.local"
-  IdentityFile ~/.ssh/{{ if eq .chezmoi.os "darwin" }}id_ed25519.pub{{ else }}id_{{ .chezmoi.hostname }}{{ end }}
+  IdentityFile ~/.ssh/id_ed25519{{ if eq .chezmoi.os "darwin" }}.pub{{ end }}
   AddKeysToAgent yes
   ForwardAgent yes
 
@@ -23,7 +23,7 @@ Host *
   AppleMultipath yes
   IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
   {{ end -}}
-  IdentityFile ~/.ssh/{{ if eq .chezmoi.os "darwin" }}id_ed25519.pub{{ else }}id_{{ .chezmoi.hostname }}{{ end }}
+  IdentityFile ~/.ssh/id_ed25519{{ if eq .chezmoi.os "darwin" }}.pub{{ end }}
   AddressFamily inet
   ControlMaster auto
   ControlPath ~/.ssh/controlmasters/%r@%h__%p
