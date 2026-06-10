@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+
+# Union-merge, never replace: other systems (IaC provisioning, cloud-init)
+# also grant inbound access via this file, and wholesale ownership by chezmoi
+# means a bad render locks this machine's door. Existing entries are kept;
+# GitHub-registered keys are appended if missing; blanks and dupes dropped.
+{
+    cat -
+{{ range gitHubKeys "dljsjr" }}    printf '%s\n' {{ .Key | quote }}
+{{ end -}}
+} | awk 'NF && !seen[$0]++'
