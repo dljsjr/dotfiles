@@ -10,10 +10,10 @@ Host GameBox
   AddKeysToAgent yes
   ForwardAgent yes
 
-Host Jox
+Host Sonny
   AddressFamily inet
   User "dstephen"
-  HostName "jox.local"
+  HostName "sonny.local"
   IdentityFile ~/.ssh/id_ed25519{{ if eq .chezmoi.os "darwin" }}.pub{{ end }}
   AddKeysToAgent yes
   ForwardAgent yes
@@ -28,3 +28,5 @@ Host *
   ControlMaster auto
   ControlPath ~/.ssh/controlmasters/%r@%h__%p
   ControlPersist 8h
+  ServerAliveInterval 60
+  ServerAliveCountMax 30

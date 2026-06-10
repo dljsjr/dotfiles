@@ -8,7 +8,7 @@ minimum-contrast = 1
 
 # font
 font-family = "Intel One Mono"
-font-size = 14
+font-size = 16
 
 # workding dir inheritance
 window-inherit-working-directory = false

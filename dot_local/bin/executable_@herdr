@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+export PI_CODING_AGENT_DIR=$HOME/.sandpiper/agent
+cargo run --release --manifest-path ~/git/herdr/Cargo.toml -- $@
