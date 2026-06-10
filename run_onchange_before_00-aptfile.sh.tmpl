@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+{{ $aptfile := joinPath .chezmoi.sourceDir "Aptfile" -}}
+{{ if and (ne .chezmoi.os "darwin") (lookPath "apt-get") (stat $aptfile) -}}
+# aptfile hash: {{ include $aptfile | sha256sum }}
+
+# Brewfile-equivalent for debian-likes: one package per line, '#' comments.
+# Installs only what's missing; never removes.
+set -eu
+
+missing=""
+for pkg in $(sed -e 's/#.*//' "{{ $aptfile }}")
+do
+    dpkg -s "$pkg" >/dev/null 2>&1 || missing="$missing $pkg"
+done
+
+[ -n "$missing" ] || exit 0
+
+if [ -t 0 ] || sudo -n true 2>/dev/null
+then
+    # shellcheck disable=SC2086
+    sudo apt-get install -y $missing
+else
+    # Headless runs can't answer a sudo password prompt; don't let missing
+    # packages abort the whole apply.
+    printf "warn: apt packages missing (%s) but sudo needs a password in a non-interactive run; rerun updot in a terminal\n" "$missing" >&2
+fi
+{{ else -}}
+# no Aptfile in this source, not a debian-like, or no apt-get
+{{ end -}}
