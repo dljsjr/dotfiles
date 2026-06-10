@@ -10,7 +10,9 @@ printf "updating terminfo symlinks\n"
 ## {{ $terminfo }} hash: {{ include $terminfo | sha256sum }}, last modified: {{ (lstat $terminfo).modTime }}
 {{ end -}}
 {{ end -}}
-find {{ $terminfoRoot }} -print0 | while IFS= read -r -d '' maybeDir
+# newline-delimited on purpose: `read -d ''` is a bashism (dash rejects it),
+# and terminfo paths never contain newlines.
+find {{ $terminfoRoot }} | while IFS= read -r maybeDir
 do
     if [ -L "$maybeDir" ] && [ ! -e "$maybeDir" ]
     then
