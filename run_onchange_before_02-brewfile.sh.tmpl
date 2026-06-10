@@ -12,5 +12,13 @@
 {{ end -}}
 if [ -f "{{ $brewfile }}" ] && command -v brew >/dev/null 2>&1 && ! brew bundle check >/dev/null 2>&1 --file "{{ $brewfile }}"
 then
-    brew bundle install --file "{{ $brewfile }}"
+    if [ -t 0 ]
+    then
+        brew bundle install --file "{{ $brewfile }}"
+    else
+        # Headless runs can't answer password prompts (e.g. mas installs need
+        # sudo); don't let an incomplete bundle abort the whole apply.
+        brew bundle install --file "{{ $brewfile }}" \
+            || printf "warn: brew bundle incomplete (non-interactive); rerun updot in a terminal\n" >&2
+    fi
 fi
