@@ -1,8 +1,10 @@
 ### Taps
 tap "umputun/apps"
+tap "ttscoff/thelab"
 
 ### Common Formulae
 brew "age" unless which("age", ORIGINAL_PATHS)
+brew "ast-grep"
 brew "atuin" unless which("atuin", ORIGINAL_PATHS)
 brew "bat"
 brew "bottom"
@@ -11,6 +13,7 @@ brew "chezmoi" unless which("chezmoi", ORIGINAL_PATHS)
 brew "dasel"
 brew "difftastic"
 brew "dua-cli"
+brew "duckdb"
 brew "fd"
 brew "fish"
 brew "fzf"
@@ -28,6 +31,7 @@ brew "mas" if OS.mac?
 brew "mise" unless which("mise", ORIGINAL_PATHS)
 brew "ninja"
 brew "ripgrep"
+brew "scc"
 brew "shellcheck"
 brew "shfmt"
 brew "umputun/apps/revdiff"
@@ -42,6 +46,7 @@ brew "container" if OS.mac?
 brew "curl" if OS.mac?
 brew "gpg" if OS.mac?
 brew "neovim" if OS.mac?
+brew "ttscoff/thelab/mk" if OS.mac?
 brew "rsync" if OS.mac?
 brew "telnet" if OS.mac?
 brew "wget" if OS.mac?

@@ -10,6 +10,15 @@
 # no brewfile
 # last check time: {{ now | unixEpoch }}
 {{ end -}}
+# Homebrew 6+ requires third-party taps to be explicitly trusted before their
+# formulae load (state lives in ~/.homebrew/trust.json, per-machine). Idempotent;
+# keep in sync with the taps declared in the Brewfile.
+if command -v brew >/dev/null 2>&1
+then
+    brew trust --tap umputun/apps >/dev/null 2>&1 || true
+    brew trust --tap ttscoff/thelab >/dev/null 2>&1 || true
+fi
+
 if [ -f "{{ $brewfile }}" ] && command -v brew >/dev/null 2>&1 && ! brew bundle check >/dev/null 2>&1 --file "{{ $brewfile }}"
 then
     if [ -t 0 ]
