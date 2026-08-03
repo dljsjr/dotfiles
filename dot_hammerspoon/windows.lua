@@ -1,15 +1,15 @@
-local log = hs.logger.new('WindowManager','debug')
+local log = hs.logger.new('WindowManager', 'debug')
 --#region WM Config
 
-local GRID_SIZE = 5
--- local HALF_GRID_SIZE = GRID_SIZE / 2
+-- local GRID_SIZE = 5
+-- -- local HALF_GRID_SIZE = GRID_SIZE / 2
 
-hs.grid.setGrid(string.format("%sx%s", GRID_SIZE, GRID_SIZE))
-hs.grid.setMargins({0,0})
-hs.grid.HINTS = {
-  {'a','s','d','f','g'},
-  {'h','j','k','l',';'},
-}
+-- hs.grid.setGrid(string.format("%sx%s", GRID_SIZE, GRID_SIZE))
+-- hs.grid.setMargins({0,0})
+-- hs.grid.HINTS = {
+--   {'a','s','d','f','g'},
+--   {'h','j','k','l',';'},
+-- }
 hs.window.animationDuration = 0
 
 --#endregion WM Config
@@ -19,15 +19,15 @@ hs.window.animationDuration = 0
 ---@param window hs.window
 ---@return boolean
 local function isWindowMaximized(window)
-  local screenFrame = window:screen():frame()
-  local winFrame = window:frame()
+    local screenFrame = window:screen():frame()
+    local winFrame = window:frame()
 
-  return winFrame:equals(screenFrame)
+    return winFrame:equals(screenFrame)
 end
 
 ---@param window hs.window
 local function moveToNextScreen(window)
-  window:moveToScreen(window:screen():previous(), false, true)
+    window:moveToScreen(window:screen():previous(), false, true)
 end
 
 --#endregion private functions
@@ -40,12 +40,12 @@ local M = {}
 ---
 ---@param window hs.window? window to maximize, or the currently focused window if nil
 function M.fillScreen(window)
-  if not window then window = hs.window.focusedWindow() end
+    if not window then window = hs.window.focusedWindow() end
 
-  if window then
-    local screenFrame = window:screen():frame()
-    window:setFrame(screenFrame)
-  end
+    if window then
+        local screenFrame = window:screen():frame()
+        window:setFrame(screenFrame)
+    end
 end
 
 ---If the given window or the currently focused window is already maximized, then cycle
@@ -54,15 +54,15 @@ end
 ---
 ---@param window hs.window? window to maximize, or the currently focused window if nil
 function M.fillScreenWithCycle(window)
-  if window == nil then window = hs.window.focusedWindow() end
+    if window == nil then window = hs.window.focusedWindow() end
 
-  if window then
-    if not isWindowMaximized(window)  then
-      M.fillScreen(window)
-    else
-      moveToNextScreen(window)
+    if window then
+        if not isWindowMaximized(window) then
+            M.fillScreen(window)
+        else
+            moveToNextScreen(window)
+        end
     end
-  end
 end
 
 return M
