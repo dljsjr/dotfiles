@@ -1,5 +1,9 @@
 hs.logger.setGlobalLogLevel('debug')
+hs.loadSpoon("Spoonbill")
 
+spoon.Spoonbill:loadConfig()
+-- spoon.Spoonbill:saveConfig()
+--
 -- configs
 hs.accessibilityState(true)
 hs.allowAppleScript(true)
