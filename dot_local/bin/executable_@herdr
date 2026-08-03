@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 
 export PI_CODING_AGENT_DIR=$HOME/.sandpiper/agent
-cargo run --release --manifest-path ~/git/herdr/Cargo.toml -- $@
+mise x zig@0.15.2 -- cargo run --release --manifest-path ~/git/herdr/Cargo.toml -- $@
