@@ -58,12 +58,15 @@ cask "font-intone-mono-nerd-font" if OS.mac?
 
 # Mac App Store
 mas "1Password for Safari", id: 1569813296 if OS.mac?
+mas "Aiko", id: 1672085276 if OS.mac?
 # mas "Amphetamine", id: 937984704 if OS.mac?
 mas "DaisyDisk", id: 411643860 if OS.mac?
+mas "Day One", id: 1055511498 if OS.mac?
 mas "Fantastical", id: 975937182 if OS.mac?
 # mas "Gapplin", id: 768053424 if OS.mac?
 mas "Gifski", id: 1351639930 if OS.mac?
 mas "GoodLinks", id: 1474335294 if OS.mac?
+mas "Grocery", id: 1195676848 if OS.mac?
 # mas "Hand Mirror", id: 1502839586 if OS.mac?
 mas "Hyperduck", id: 6444667067 if OS.mac?
 # mas "iMovie", id: 408981434 if OS.mac?
@@ -77,7 +80,9 @@ mas "Photomator", id: 1444636541 if OS.mac?
 mas "Pixelmator Pro", id: 1289583905 if OS.mac?
 mas "Refined GitHub", id: 1519867270 if OS.mac?
 mas "Silicio", id: 933627574 if OS.mac?
+mas "Streaks", id: 963034692 if OS.mac?
 # mas "TestFlight", id: 899247664 if OS.mac?
 mas "Todoist", id: 585829637 if OS.mac?
+mas "Velja", id: 1607635845 if OS.mac?
 mas "Xcode", id: 497799835 if OS.mac?
 mas "Yoink", id: 457622435 if OS.mac?
