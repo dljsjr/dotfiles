@@ -1,0 +1,24 @@
+{{- if (eq .chezmoi.os "linux") -}}
+#!/usr/bin/env bash
+exec 3<>/dev/tty || { echo "pbpaste: no controlling terminal" >&2; exit 1; }
+saved=$(stty -g <&3)
+trap 'stty "$saved" <&3 2>/dev/null; exec 3>&-' EXIT
+stty raw -echo isig <&3
+printf '\033]52;c;?\a' >&3
+reply='' esc=0
+while IFS= read -rN1 -t "${1:-2}" c <&3; do
+    case $c in
+        $'\a')   break ;;
+        $'\033') esc=1; continue ;;
+    esac
+    if (( esc )); then esc=0; [ "$c" = '\' ] && break; fi
+    reply+=$c
+done
+[ -n "$reply" ]       || { echo "pbpaste: no OSC 52 reply (local terminal or tmux may not allow clipboard reads)" >&2; exit 1; }
+[[ $reply == *';'* ]] || { echo "pbpaste: unexpected reply from terminal" >&2; exit 1; }
+b64=${reply##*;}
+b64=$(printf '%s' "$b64" | tr -dc 'A-Za-z0-9+/=')
+[ -z "$b64" ] && exit 0
+printf '%s' "$b64" | base64 -d
+
+{{ end -}}

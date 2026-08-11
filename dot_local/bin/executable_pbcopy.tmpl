@@ -1,0 +1,4 @@
+{{- if (eq .chezmoi.os "linux") -}}
+#!/usr/bin/env bash
+{ printf '\033]52;c;'; base64 -w0; printf '\007'; } > /dev/tty
+{{ end -}}
