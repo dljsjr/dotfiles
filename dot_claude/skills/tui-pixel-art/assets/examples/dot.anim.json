@@ -1,0 +1,13 @@
+{
+  "_comment": "Minimal 3-frame animation: a 2px dot falling. 5x6 px -> 5 cells x 3 cell-rows per frame. Demonstrates the ANIMATION format consumed by preview.py.",
+  "fps": 6,
+  "loop": true,
+  "frames": [
+    {"palette": {".": null, "O": [255, 80, 80]},
+     "rows": ["..O..", "..O..", ".....", ".....", ".....", "....."]},
+    {"palette": {".": null, "O": [255, 80, 80]},
+     "rows": [".....", ".....", "..O..", "..O..", ".....", "....."]},
+    {"palette": {".": null, "O": [255, 80, 80]},
+     "rows": [".....", ".....", ".....", ".....", "..O..", "..O.."]}
+  ]
+}

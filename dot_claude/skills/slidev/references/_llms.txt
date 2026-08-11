@@ -1,0 +1,107 @@
+# Slidev
+
+> Presentation slides for developers
+
+## Table of Contents
+
+### Guide
+
+- [Why Slidev](/guide/why.md)
+- [Getting Started](/guide.md)
+- [Syntax Guide](/guide/syntax.md)
+- [User Interface](/guide/ui.md)
+- [Animation](/guide/animations.md)
+- [Theme and Addons](/guide/theme-addon.md)
+- [Components in Slides](/guide/component.md)
+- [Slide Layout](/guide/layout.md)
+- [Exporting](/guide/exporting.md)
+- [Building and Hosting](/guide/hosting.md)
+- [Work with AI](/guide/work-with-ai.md)
+- [FAQ](/guide/faq.md)
+
+### Advanced
+
+- [Global Context](/guide/global-context.md)
+- [Writing Layouts](/guide/write-layout.md)
+- [Writing Themes](/guide/write-theme.md)
+- [Writing Addons](/guide/write-addon.md)
+
+### Customizations
+
+- [Customizations](/custom.md)
+- [Directory Structure](/custom/directory-structure.md)
+- [Configure Highlighter](/custom/config-highlighter.md)
+- [Configure Vite and Plugins](/custom/config-vite.md)
+- [Configure Vue App](/custom/config-vue.md)
+- [Configure UnoCSS](/custom/config-unocss.md)
+- [Configure Code Runners](/custom/config-code-runners.md)
+- [Configure Transformers](/custom/config-transformers.md)
+- [Configure Monaco](/custom/config-monaco.md)
+- [Configure KaTeX](/custom/config-katex.md)
+- [Configure Mermaid](/custom/config-mermaid.md)
+- [Configure Mermaid Renderer](/custom/config-mermaid-renderer.md)
+- [Configure Routes](/custom/config-routes.md)
+- [Configure Shortcuts](/custom/config-shortcuts.md)
+- [Configure Context Menu](/custom/config-context-menu.md)
+- [Configure Fonts](/custom/config-fonts.md)
+- [Configure Pre-Parser](/custom/config-parser.md)
+
+### Built-in
+
+- [Slidev CLI](/builtin/cli.md)
+- [Components](/builtin/components.md)
+- [Layouts](/builtin/layouts.md)
+
+### Resources
+
+- [Showcases](/resources/showcases.md)
+- [Theme Gallery](/resources/theme-gallery.md)
+- [Addon Gallery](/resources/addon-gallery.md)
+- [Learning Resources](/resources/learning.md)
+- [Curated Covers](/resources/covers.md)
+
+### Other
+
+- [Block Frontmatter](/features/block-frontmatter.md): Use a YAML code block as the frontmatter.
+- [Bundle Remote Assets](/features/bundle-remote-assets.md): Download and bundle remote assets when building your slides.
+- [Click Markers](/features/click-marker.md): Highlighting notes and auto-scrolling to the active section of notes.
+- [Code Groups](/features/code-groups.md): Group multiple code blocks and automatically match icon by the title name.
+- [Comark Syntax](/features/comark.md): A powerful syntax to enhance your markdown content with components and styles.
+- [Draggable Elements](/features/draggable.md): Move, resize, and rotate elements by dragging them with the mouse.
+- [Drawing & Annotations](/features/drawing.md): Draw and annotate your slides with ease.
+- [Eject Theme](/features/eject-theme.md): Eject the installed theme from your project to customize it.
+- [Features](/features.md)
+- [Frontmatter Merging](/features/frontmatter-merging.md): Merge frontmatter from multiple markdown files.
+- [Generate PDF when Building](/features/build-with-pdf.md): Generate a downloadable PDF along with your slides build.
+- [Global Layers](/features/global-layers.md): Create custom components that persist across slides.
+- [Icons](/features/icons.md): Use icons from virtually all open-source icon sets directly in your markdown.
+- [Import Code Snippets](/features/import-snippet.md): Import code snippets from existing files into your slides.
+- [Importing Slides](/features/importing-slides.md): Split your `slides.md` into multiple files for better reusability and organization.
+- [Integrated Editor](/features/side-editor.md): Edit your slides source file alongside the presentation.
+- [LaTeX](/features/latex.md): Slidev comes with LaTeX support out-of-box, powered by KaTeX.
+- [Line Highlighting](/features/line-highlighting.md): Highlight specific lines in code blocks based on clicks.
+- [Line Numbers](/features/code-block-line-numbers.md): Enable line numbering for all code blocks across the slides or individually.
+- [Max Height](/features/code-block-max-height.md): Set a maximum height for a code block and enable scrolling.
+- [Mermaid Diagrams](/features/mermaid.md): Create diagrams/graphs from textual descriptions, powered by Mermaid.
+- [Monaco Editor](/features/monaco-editor.md): Turn code blocks into fully-featured editors, or generate a diff between two code blocks.
+- [Monaco Runner](/features/monaco-run.md): Run code directly in the editor and see the result.
+- [Navigation Direction Variants](/features/direction-variant.md): Apply different styles and animations based on the navigation direction.
+- [Notes Auto Ruby](/features/notes-auto-ruby.md): Automatically add `<ruby>` tags to your notes.
+- [Open Graph Image](/features/og-image.md): Set the Open Graph image for your slides.
+- [PlantUML Diagrams](/features/plantuml.md): Create diagrams from textual descriptions, powered by PlantUML.
+- [Presenter Timer](/features/timer.md): Timer for the presenter mode.
+- [Prettier Plugin](/features/prettier-plugin.md): Use the Prettier plugin to format your slides.
+- [Recording](/features/recording.md): Record your presentation with the built-in camera view and recording feature.
+- [Remote Access](/features/remote-access.md): Access your presentation remotely with Slidev's remote access feature.
+- [Rough Markers](/features/rough-marker.md): Integrate Rough Notation to allow marking or highlighting elements in your slides.
+- [SEO Meta Tags](/features/seo-meta.md): Configure SEO meta tags for better social media sharing and search engine optimization.
+- [Shiki Magic Move](/features/shiki-magic-move.md): Enable granular transition between code changes, similar to Keynote's Magic Move.
+- [Slide Canvas Size](/features/canvas-size.md): Set the size for all your slides.
+- [Slide Hooks](/features/slide-hook.md): Hooks to manage the slide lifecycle.
+- [Slide Scope Styles](/features/slide-scope-style.md): Define styles for only the current slide.
+- [Slot Sugar for Layouts](/features/slot-sugar.md): A syntax sugar for named slots in layouts.
+- [The `Transform` Component](/features/transform-component.md): A component for scaling some elements.
+- [TwoSlash Integration](/features/twoslash.md): A powerful tool for rendering TypeScript code blocks with type information on hover or inlined.
+- [VS Code Extension](/features/vscode-extension.md): Help you better organize your slides and have a quick overview of them.
+- [Writable Monaco Editor](/features/monaco-write.md): A monaco editor that allows you to write code directly in the slides and save the changes back to the file.
+- [Zoom Slides](/features/zoom-slide.md): Zoom the content of a slide to a specific scale.

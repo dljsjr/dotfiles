@@ -1,0 +1,101 @@
+{
+  "version": 2,
+  "plugins": {
+    "rust-analyzer-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/doug.stephen/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-04-17T17:11:09.784Z",
+        "lastUpdated": "2026-04-17T17:11:09.784Z"
+      }
+    ],
+    "duckdb-skills@duckdb-skills": [
+      {
+        "scope": "user",
+        "installPath": "/Users/doug.stephen/.claude/plugins/cache/duckdb-skills/duckdb-skills/0.2.4",
+        "version": "0.2.4",
+        "installedAt": "2026-05-06T04:15:19.012Z",
+        "lastUpdated": "2026-05-06T04:15:19.012Z",
+        "gitCommitSha": "7feda8e01e22bc0886c86123f3884947e36d8c69"
+      }
+    ],
+    "astral@astral-sh": [
+      {
+        "scope": "user",
+        "installPath": "/Users/doug.stephen/.claude/plugins/cache/astral-sh/astral/0.1.0",
+        "version": "0.1.0",
+        "installedAt": "2026-05-06T04:16:24.957Z",
+        "lastUpdated": "2026-05-06T04:16:24.957Z",
+        "gitCommitSha": "f3ce88a7ba830f53afd6d944c1d0278ed318e142"
+      }
+    ],
+    "typescript-lsp@claude-plugins-official": [
+      {
+        "scope": "local",
+        "projectPath": "/Users/doug.stephen/git/pi-claude-code-cli-provider",
+        "installPath": "/Users/doug.stephen/.claude/plugins/cache/claude-plugins-official/typescript-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-05-08T19:09:07.802Z",
+        "lastUpdated": "2026-05-08T19:09:07.802Z"
+      }
+    ],
+    "ts-dev@project-plugins": [
+      {
+        "scope": "local",
+        "projectPath": "/Users/doug.stephen/git/pi-claude-code-cli-provider",
+        "installPath": "/Users/doug.stephen/.claude/plugins/cache/project-plugins/ts-dev/0727a6216ef0",
+        "version": "0727a6216ef0",
+        "installedAt": "2026-05-08T20:00:49.546Z",
+        "lastUpdated": "2026-05-08T20:00:49.546Z",
+        "gitCommitSha": "0727a6216ef03c3b28d77cc4e303ff813728df17"
+      }
+    ],
+    "frontend-design@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/doug.stephen/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown",
+        "version": "unknown",
+        "installedAt": "2026-05-29T19:41:58.012Z",
+        "lastUpdated": "2026-08-05T16:13:08.390Z"
+      }
+    ],
+    "php-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/doug.stephen/.claude/plugins/cache/claude-plugins-official/php-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-06-10T04:13:25.160Z",
+        "lastUpdated": "2026-06-10T04:13:25.160Z"
+      }
+    ],
+    "code-simplifier@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/doug.stephen/.claude/plugins/cache/claude-plugins-official/code-simplifier/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-06-23T17:44:53.287Z",
+        "lastUpdated": "2026-06-23T17:44:53.287Z"
+      }
+    ],
+    "skill-creator@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/doug.stephen/.claude/plugins/cache/claude-plugins-official/skill-creator/unknown",
+        "version": "unknown",
+        "installedAt": "2026-07-01T02:49:11.617Z",
+        "lastUpdated": "2026-08-05T16:13:08.401Z"
+      }
+    ],
+    "i-have-adhd@i-have-adhd": [
+      {
+        "scope": "user",
+        "installPath": "/Users/doug.stephen/.claude/plugins/cache/i-have-adhd/i-have-adhd/0.1.0",
+        "version": "0.1.0",
+        "installedAt": "2026-07-26T19:35:54.110Z",
+        "lastUpdated": "2026-07-26T19:35:54.110Z",
+        "gitCommitSha": "16a42a01f7783e29db8557dfc46226baf8015618"
+      }
+    ]
+  }
+}

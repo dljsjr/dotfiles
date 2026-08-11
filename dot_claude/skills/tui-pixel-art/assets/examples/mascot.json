@@ -1,0 +1,28 @@
+{
+  "_comment": "Example asset: a small original mascot, 14x16 pixels -> 14 cells wide x 8 cells tall. Demonstrates the SPRITE authoring format: each char in 'rows' indexes 'palette'; null = transparent. Rows are paired top/bottom by the half-block renderer.",
+  "palette": {
+    ".": null,
+    "O": [222, 128, 92],
+    "o": [180, 92, 62],
+    "k": [38, 28, 24],
+    "w": [245, 240, 232]
+  },
+  "rows": [
+    "....OOOOOO....",
+    "...OOOOOOOO...",
+    "..OOOOOOOOOO..",
+    ".OOOOOOOOOOOO.",
+    ".OOkkOOOOkkOO.",
+    ".OOkwOOOOkwOO.",
+    ".OOkkOOOOkkOO.",
+    ".OOOOOOOOOOOO.",
+    ".OOOOOOOOOOOO.",
+    ".OOOOoooOOOOO.",
+    ".OOOOoooOOOOO.",
+    ".OOOOOOOOOOOO.",
+    "..OOOOOOOOOO..",
+    "..OOOOOOOOOO..",
+    "...OO....OO...",
+    "...OO....OO..."
+  ]
+}

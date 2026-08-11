@@ -1,0 +1,15 @@
+{
+  "trustedtaps": [
+    "https://github.com/hewigovens/tap.git",
+    "https://github.com/jundot/omlx",
+    "jstkdng/programs",
+    "ttscoff/thelab",
+    "umputun/apps"
+  ],
+  "trustedformulae": [
+    "ttscoff/thelab/mk"
+  ],
+  "trustedcasks": [
+    "nkzw-tech/tap/codiff"
+  ]
+}

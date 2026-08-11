@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_CODE_NO_FLICKER": "1",
+    "CLAUDE_CODE_PROACTIVE": "1",
+    "PI_CODING_AGENT_DIR": "~/.sandpiper/agent",
+    "CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS": "1",
+    "CLAUDE_AUTO_BACKGROUND_TASKS": "1",
+    "CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL": "1",
+    "CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY": "20",
+    "CLAUDE_CODE_NATIVE_CURSOR": "1"
+  },
+  "includeGitInstructions": false,
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
+  "model": "claude-fable-5[1m]",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/session-start.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/doug.stephen/.claude/hooks/pccp-smoke-freshness.sh"
+          }
+        ]
+      }
+    ],
+    "TaskCreated": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/task-created.sh"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/task-completed.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/exit-plan-mode.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "EnterPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/enter-plan-mode.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "TaskUpdate",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/task-update.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/doug.stephen/.claude/hooks/block-rg-dash-r.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/doug.stephen/.claude/hooks/inject-local-time.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/doug.stephen/.claude/hooks/tracker-keys-in-comments.py 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  },
+  "enableArtifact": true,
+  "statusLine": {
+    "type": "command",
+    "command": "/Users/doug.stephen/.claude/statusline.sh",
+    "padding": 0,
+    "refreshInterval": 30
+  },
+  "enabledPlugins": {
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "duckdb-skills@duckdb-skills": true,
+    "astral@astral-sh": true,
+    "frontend-design@claude-plugins-official": true,
+    "php-lsp@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true,
+    "i-have-adhd@i-have-adhd": true
+  },
+  "extraKnownMarketplaces": {
+    "duckdb-skills": {
+      "source": {
+        "source": "github",
+        "repo": "duckdb/duckdb-skills"
+      }
+    },
+    "astral-sh": {
+      "source": {
+        "source": "github",
+        "repo": "astral-sh/claude-code-plugins"
+      }
+    },
+    "i-have-adhd": {
+      "source": {
+        "source": "github",
+        "repo": "ayghri/i-have-adhd"
+      }
+    }
+  },
+  "outputStyle": "Proactive",
+  "viewMode": "verbose",
+  "syntaxHighlightingDisabled": false,
+  "effortLevel": "xhigh",
+  "tui": "fullscreen",
+  "showThinkingSummaries": true,
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
+  "remoteControlAtStartup": true,
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "display": "summarized",
+  "thinkingDisplay": "summarized"
+}
