@@ -1,0 +1,5 @@
+!.config/zed
+!.hammerspoon
+!*/darwin/
+!*/**/darwin/
+!**/*-darwin-*

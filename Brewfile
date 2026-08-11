@@ -1,6 +1,6 @@
 ### Taps
-tap "umputun/apps"
-tap "ttscoff/thelab"
+tap "umputun/apps", trusted: true
+tap "ttscoff/thelab", trusted: true if OS.mac?
 
 ### Common Formulae
 brew "age" unless which("age", ORIGINAL_PATHS)
@@ -27,7 +27,6 @@ brew "jj"
 brew "jq"
 brew "just"
 brew "lnav"
-brew "mas" if OS.mac?
 brew "mise" unless which("mise", ORIGINAL_PATHS)
 brew "ninja"
 brew "ripgrep"
@@ -45,6 +44,7 @@ brew "zoxide"
 brew "container" if OS.mac?
 brew "curl" if OS.mac?
 brew "gpg" if OS.mac?
+brew "mas" if OS.mac?
 brew "neovim" if OS.mac?
 brew "ttscoff/thelab/mk" if OS.mac?
 brew "rsync" if OS.mac?

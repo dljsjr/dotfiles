@@ -4,9 +4,11 @@ README.md
 Aptfile
 Brewfile
 
+.CFUserTextEncoding
 .DS_STORE
 .thumbnails
 .Trash
+**/.CFUserTextEncoding
 **/.DS_Store
 **/.Trash
 **/.thumbnails
@@ -83,6 +85,7 @@ Brewfile
 .config/jj/repos
 .config/jj/workspaces
 .config/revdiff
+.config/zed
 
 .local/bin/activate-global-python-argcomplete
 .local/bin/code
@@ -143,12 +146,10 @@ Brewfile
 {{- end }}
 
 darwin/
-{{ if ne .chezmoi.os "darwin" -}}
-.config/zed
-.hammerspoon
-*/darwin/
-*/**/darwin/
-**/*-darwin-*
-{{ end -}}
-
 bin/
+
+{{- $osIgnoreFile := (print "." .chezmoi.os "ignore") -}}
+{{- $stat := lstat $osIgnoreFile -}}
+{{- if and $stat (eq $stat.type "file") -}}
+{{ includeTemplate $osIgnoreFile }}
+{{ end }}
