@@ -131,6 +131,12 @@ Brewfile
 !.claude/skills/**/*
 !.claude/statusline.sh
 
+{{- $noFish := env "NOFISH" -}}
+{{- if eq $noFish "1" -}}
+.config/fish/
+**/fish/
+{{ end }}
+
 {{ range $binFile := glob (joinPath .chezmoi.homeDir ".local" "bin" "**" "*") -}}
 {{- with $mime := output "file" "-b" "-L" "--mime" $binFile -}}
 {{- if or (contains "executable" $mime) (contains "=binary" $mime) }}
