@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
 """PreToolUse(Bash) guard: block ripgrep invocations using a single-dash
 `-r` short-flag cluster (-r, -rn, -rln, -nr, -rhoI, ...).
 

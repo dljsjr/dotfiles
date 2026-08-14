@@ -20,75 +20,15 @@
             "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/bootstrap.py"
           }
         ]
-      },
-      {
-        "matcher": "startup|resume|clear|compact",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/session-start.sh"
-          },
-          {
-            "type": "command",
-            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/pccp-smoke-freshness.sh"
-          }
-        ]
-      }
-    ],
-    "TaskCreated": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/task-created.sh"
-          }
-        ]
-      }
-    ],
-    "TaskCompleted": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/task-completed.sh"
-          }
-        ]
       }
     ],
     "PreToolUse": [
-      {
-        "matcher": "ExitPlanMode",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/exit-plan-mode.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "EnterPlanMode",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/enter-plan-mode.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "TaskUpdate",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/task-update.sh"
-          }
-        ]
-      },
       {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 {{- .chezmoi.homeDir -}}/.claude/hooks/block-rg-dash-r.py"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/block-rg-dash-r.py"
           }
         ]
       }
@@ -109,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 {{- .chezmoi.homeDir -}}/.claude/hooks/tracker-keys-in-comments.py 2>/dev/null || true"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/tracker-keys-in-comments.py 2>/dev/null || true"
           }
         ]
       }
