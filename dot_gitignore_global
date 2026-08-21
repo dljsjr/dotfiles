@@ -19,6 +19,7 @@ dist/
 .pi/
 .sandpiper/
 .claude/
+.claude/settings.local.json
 AGENTS*.md
 GEMINI*.md
 CLAUDE*.md

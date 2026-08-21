@@ -3,33 +3,31 @@
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_NO_FLICKER": "1",
-    "CLAUDE_CODE_PROACTIVE": "1",
-    "PI_CODING_AGENT_DIR": "~/.sandpiper/agent",
-    "CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS": "1",
-    "CLAUDE_AUTO_BACKGROUND_TASKS": "1",
-    "CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL": "1",
-    "CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY": "20",
-    "CLAUDE_CODE_NATIVE_CURSOR": "1"
+    "PI_CODING_AGENT_DIR": "~/.sandpiper/agent"
   },
   "includeGitInstructions": false,
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
-  "model": "claude-fable-5[1m]",
+  "model": "opus[1m]",
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear|compact",
+        "matcher": "startup|resume",
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/session-start.sh"
+            "command": "/Users/doug.stephen/.claude/hooks/bootstrap.py"
           }
         ]
       },
       {
         "matcher": "startup|resume|clear|compact",
         "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/session-start.sh"
+          },
           {
             "type": "command",
             "command": "/Users/doug.stephen/.claude/hooks/pccp-smoke-freshness.sh"
@@ -154,12 +152,12 @@
       }
     }
   },
-  "outputStyle": "Proactive",
-  "viewMode": "verbose",
+  "outputStyle": "Concise",
+  "viewMode": "focus",
   "syntaxHighlightingDisabled": false,
   "effortLevel": "xhigh",
   "tui": "fullscreen",
-  "showThinkingSummaries": true,
+  "showThinkingSummaries": false,
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "remoteControlAtStartup": true,
