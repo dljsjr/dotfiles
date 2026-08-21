@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/doug.stephen/.claude/hooks/bootstrap.py"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/bootstrap.py"
           }
         ]
       },
@@ -26,11 +26,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/session-start.sh"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/session-start.sh"
           },
           {
             "type": "command",
-            "command": "/Users/doug.stephen/.claude/hooks/pccp-smoke-freshness.sh"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/pccp-smoke-freshness.sh"
           }
         ]
       }
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/task-created.sh"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/task-created.sh"
           }
         ]
       }
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/task-completed.sh"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/task-completed.sh"
           }
         ]
       }
@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/exit-plan-mode.sh"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/exit-plan-mode.sh"
           }
         ]
       },
@@ -70,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/enter-plan-mode.sh"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/enter-plan-mode.sh"
           }
         ]
       },
@@ -79,7 +79,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/doug.stephen/.claude/hooks/claude-stasks/task-update.sh"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/claude-stasks/task-update.sh"
           }
         ]
       },
@@ -88,7 +88,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/doug.stephen/.claude/hooks/block-rg-dash-r.py"
+            "command": "python3 {{- .chezmoi.homeDir -}}/.claude/hooks/block-rg-dash-r.py"
           }
         ]
       }
@@ -98,7 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/doug.stephen/.claude/hooks/inject-local-time.sh"
+            "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/inject-local-time.sh"
           }
         ]
       }
@@ -109,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/doug.stephen/.claude/hooks/tracker-keys-in-comments.py 2>/dev/null || true"
+            "command": "python3 {{- .chezmoi.homeDir -}}/.claude/hooks/tracker-keys-in-comments.py 2>/dev/null || true"
           }
         ]
       }
@@ -118,7 +118,7 @@
   "enableArtifact": true,
   "statusLine": {
     "type": "command",
-    "command": "/Users/doug.stephen/.claude/statusline.sh",
+    "command": "{{- .chezmoi.homeDir -}}/.claude/statusline.sh",
     "padding": 0,
     "refreshInterval": 30
   },
