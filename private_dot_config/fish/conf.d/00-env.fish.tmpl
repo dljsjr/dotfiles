@@ -77,6 +77,10 @@ if test -x "/opt/homebrew/bin/brew"
     /opt/homebrew/bin/brew shellenv fish | source
 end
 
+if test -x "/Applications/Obsidian.app/Contents/MacOS/Obsidian"
+    prepend_pathvar "/Applications/Obsidian.app/Contents/MacOS" PATH
+end
+
 set -gx TZ America/Chicago
 
 if type -q curl; and type -q curl-config; and curl-config --configure | string match --entire --quiet -r Cellar/curl

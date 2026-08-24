@@ -1,16 +1,15 @@
 function doupdate
+    set -lx MISE_MINIMUM_RELEASE_AGE 0s
+    if ! sudo -n true > /dev/null 2>&1
+        sudo -v || return 1
+    end
+
     if type -q apt-get
         if type -q apt
-            if ! sudo -n apt update >/dev/null 2>&1
-                sudo -v
-            end
             sudo apt update
             sudo apt full-upgrade -y
             sudo apt auto-remove -y
         else
-            if ! sudo -n apt-get update >/dev/null 2>&1
-                sudo -v
-            end
             sudo apt-get update
             sudo apt-get dist-upgrade -y
             sudo apt-get auto-remove -y
@@ -18,7 +17,7 @@ function doupdate
     end
 
     if type -q brew
-        brew upgrade
+        brew upgrade --yes
         sleep 0.5
         brew autoremove
         sleep 0.5
@@ -26,8 +25,8 @@ function doupdate
     end
 
     if type -q mise
-	mise self-update
-	mise upgrade --bump
+        mise self-update --yes
+        mise upgrade --bump --yes
     end
 
     if type -q rustup
@@ -39,7 +38,7 @@ function doupdate
     end
 
     if type -q mas && test -n "$(mas outdated 2>/dev/null)"
-	mas upgrade	
+	    mas upgrade	
     end
 
     if type -q fwupdmgr; and fwupdmgr get-devices 2>/dev/null | grep -v -q "No hardware detected"

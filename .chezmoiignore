@@ -84,6 +84,7 @@ Brewfile
 .config/htop
 .config/jj/repos
 .config/jj/workspaces
+.config/mise/config.local.toml
 .config/revdiff
 .config/zed
 

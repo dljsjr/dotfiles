@@ -3,13 +3,16 @@
     "https://github.com/hewigovens/tap.git",
     "https://github.com/jundot/omlx",
     "jstkdng/programs",
+    "macos-fuse-t/cask",
     "ttscoff/thelab",
     "umputun/apps"
   ],
   "trustedformulae": [
+    "macos-fuse-t/cask/sshfs-fuse-t",
     "ttscoff/thelab/mk"
   ],
   "trustedcasks": [
+    "macos-fuse-t/cask/fuse-t",
     "nkzw-tech/tap/codiff"
   ]
 }
