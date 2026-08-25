@@ -29,4 +29,10 @@ if status is-interactive
     if test -s "$HOME/.sandpiper/shell-integrations/relay.fish"
     	source "$HOME/.sandpiper/shell-integrations/relay.fish"
     end
+
+    if test -d "$__fish_config_dir/conf.d/{{- .chezmoi.os -}}"
+        for conf in $__fish_config_dir/conf.d/{{- .chezmoi.os -}}/*.fish
+            source "$conf"
+        end
+    end
 end
