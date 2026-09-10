@@ -1,6 +1,7 @@
 *~
 .DS_Store
 
+.tombi.toml
 .mise.local.toml
 *.local.toml
 

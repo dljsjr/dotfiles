@@ -17,7 +17,7 @@ do
     shift
 done
 
-IFS= read -r -d '' JJ_EVOLOG_TEMPLATE <<-EOF
+JJ_EVOLOG_TEMPLATE=$(cat <<-EOF
 if(
     self.inter_diff("$FILESET").files().len() > 0 &&
     self.inter_diff("$FILESET").files().all(|diffentry|
@@ -27,6 +27,7 @@ if(
     ""
 )
 EOF
+)
 
 jj log \
 --no-graph --reversed --revisions \
