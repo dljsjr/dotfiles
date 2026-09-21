@@ -58,5 +58,8 @@ function ssh_reset
         end
         echo ssh -p $_control_port -O stop -S "$f" $_control_user@$_control_remote
         ssh -p $_control_port -O stop -S "$f" $_control_user@$_control_remote
+        set -e _control_user
+        set -e _control_remote
+        set -e _control_port
     end
 end

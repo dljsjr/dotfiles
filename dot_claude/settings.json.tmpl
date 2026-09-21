@@ -14,7 +14,7 @@
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
-  "model": "claude-fable-5-1[1m]",
+  "model": "claude-opus-5-5[1m]",
   "hooks": {
     "SessionStart": [
       {
@@ -118,6 +118,9 @@
   "modelSettings": {
     "claude-fable-5-1": {
       "effortLevel": "xhigh"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
     }
   },
   "tui": "fullscreen",
@@ -128,5 +131,6 @@
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "display": "summarized",
-  "thinkingDisplay": "summarized"
+  "thinkingDisplay": "summarized",
+  "switchModelsOnFlag": false
 }
