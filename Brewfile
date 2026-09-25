@@ -47,6 +47,7 @@ brew "gpg" if OS.mac?
 brew "mas" if OS.mac?
 brew "neovim" if OS.mac?
 brew "ttscoff/thelab/mk" if OS.mac?
+brew "openssh" if OS.mac?
 brew "rsync" if OS.mac?
 brew "telnet" if OS.mac?
 brew "wget" if OS.mac?
