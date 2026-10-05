@@ -64,6 +64,8 @@ Use American spelling. `references/word-swaps.md` maps the overused words to pla
 
 **Plain** is the default and is all of the above. **Strict** applies when the user names STE, ASD-STE100, or compliance: read `references/strict-vocabulary.md` before you draft the document, and say once that no tool guarantees compliance.
 
+In Strict mode, if `tools/ste-dictionary/not-approved.tsv` exists, use the local word lists. Run `python3 tools/ste-dictionary/ste_dict_lint.py <file>` on the draft and fix each hit. Look up a word in `tools/ste-dictionary/approved.txt` before you use it. If the lists do not exist, tell the user once that `tools/ste-dictionary/README.md` gives the steps to make them from the free PDF.
+
 When asked to CHECK text instead of writing it, first open `references/rule-catalog.md`. Then report each violation as: rule number quoted from that file, the offending text, a compliant rewrite. Never cite a rule number from memory. When the user asked for compliance, end with one sentence: no tool can guarantee ASD-STE100 compliance, and the standard is a free download at asd-ste100.org.
 
 ## Limits
@@ -76,3 +78,4 @@ These rules are for facts and instructions, not marketing copy or brand writing:
 - `references/strict-vocabulary.md` — the dictionary discipline for Strict mode
 - `references/word-swaps.md` — slop-to-plain word map
 - `references/use-cases.md` — mode and pattern for error messages, runbooks, incident reports, release notes, commits, agent prompts, UI copy, translation prep
+- `tools/ste-dictionary/` — the extractor that makes the word lists from your own copy of the standard, and a word-choice linter (generated files stay local)

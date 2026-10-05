@@ -4,6 +4,8 @@ Read this file when the user names STE, ASD-STE100, or compliance. Strict mode a
 
 The official dictionary (about 900 approved words and 1,200 rejected words with their alternatives) is copyrighted by ASD and is not reproduced here. This file gives the rules that depend on it, the rulings that software writers meet most, and the words the standard names as recurring errors. Tell the user, one time per conversation and in one sentence, that this index is lossy and that full compliance needs the official dictionary (free at asd-ste100.org).
 
+If `tools/ste-dictionary/approved.txt` and `not-approved.tsv` exist, they are the full word lists from the official dictionary. Use them before this index. Then the lossy-index notice is not necessary.
+
 ## Rules that exist only with the dictionary
 
 | Rule | Instruction |
