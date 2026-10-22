@@ -2,11 +2,15 @@
 # Custom Claude Code statusLine.
 # Reads CC's session JSON from stdin, emits a 2-line status.
 #
-# Line 1: <model> · <effort>  ❯  ⏳ 5hr <bar> NN% · resets <Xh Ym>  ❯  ◷ 7d <bar> NN% · resets <Xd>
+# Line 1: <model> · <effort> · <ctx>  ❯  [⏳ 5hr <bar> NN% · resets <Xh Ym>]  ❯  7d <bar> NN% · resets <Xd>
+#         [❯  <Model> <bar> NN% · resets <Xd>]...
 # Line 2: <cwd>[ (worktree: <name>)]  ❯  <vcs-info>
 #
 # Section separator: ❯ (dim chevron). In-section separator: · (middle dot).
 # Effort is colored by level. Bars colored by utilization (green/yellow/red).
+# Each rate-limit window renders only when present; not every plan has every window.
+# Per-model weekly windows (e.g. Fable) are not in CC's statusline stdin. They come
+# from the OAuth usage endpoint that /usage reads, cached and refreshed in the background.
 # VCS walks up from cwd looking for .jj/ then .git/. jj wins in colocated repos.
 
 set -uo pipefail
@@ -26,6 +30,7 @@ five_pct=$(jqr '.rate_limits.five_hour.used_percentage // ""')
 five_reset=$(jqr '.rate_limits.five_hour.resets_at // ""')
 week_pct=$(jqr '.rate_limits.seven_day.used_percentage // ""')
 week_reset=$(jqr '.rate_limits.seven_day.resets_at // ""')
+has_rate_limits=$(jqr 'has("rate_limits") and .rate_limits != null')
 
 git_worktree=$(jqr '.workspace.git_worktree // ""')
 session_worktree_name=$(jqr '.worktree.name // ""')
@@ -98,9 +103,73 @@ bar() {
     printf '%s%s\033[2m%s\033[0m' "$color" "$filled" "$unfilled"
 }
 
+USAGE_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/claude-statusline"
+USAGE_CACHE="$USAGE_CACHE_DIR/usage.json"
+USAGE_STAMP="$USAGE_CACHE_DIR/last_attempt"
+USAGE_TTL=60        # seconds between refresh attempts
+USAGE_MAX_AGE=900   # ignore a cache older than this
+
+file_mtime() {
+    stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0
+}
+
+# Prints CC's claude.ai OAuth access token, or nothing if absent or expired.
+oauth_token() {
+    local creds
+    if [[ "$(uname -s)" == Darwin ]]; then
+        creds=$(security find-generic-password -a "$USER" -w -s "Claude Code-credentials" 2>/dev/null)
+    else
+        creds=$(cat "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.credentials.json" 2>/dev/null)
+    fi
+    jq -r --argjson now_ms "$(( $(date +%s) * 1000 ))" '
+        .claudeAiOauth // empty
+        | select(.accessToken and (.expiresAt // 0) > $now_ms)
+        | .accessToken' <<<"$creds" 2>/dev/null
+}
+
+refresh_usage_cache() {
+    local tok tmp
+    tok=$(oauth_token)
+    [[ -z "$tok" ]] && return
+    tmp=$(mktemp "$USAGE_CACHE.XXXXXX") || return
+    # Token goes through curl's stdin config so it stays out of the process list.
+    if printf 'header = "Authorization: Bearer %s"\n' "$tok" | curl -fsS -m 5 -K - \
+            -H "anthropic-beta: oauth-2025-04-20" \
+            -H "User-Agent: claude-statusline" \
+            -o "$tmp" https://api.anthropic.com/api/oauth/usage \
+        && jq -e 'type == "object"' "$tmp" >/dev/null 2>&1; then
+        mv -f "$tmp" "$USAGE_CACHE"
+    else
+        rm -f "$tmp"
+    fi
+}
+
+# Starts a detached refresh when the last attempt is older than USAGE_TTL.
+maybe_refresh_usage() {
+    mkdir -p "$USAGE_CACHE_DIR" 2>/dev/null || return
+    (( now - $(file_mtime "$USAGE_STAMP") < USAGE_TTL )) && return
+    touch "$USAGE_STAMP"
+    ( refresh_usage_cache ) </dev/null >/dev/null 2>&1 &
+    disown 2>/dev/null || true
+}
+
+# Prints one "<display_name>\t<pct>\t<resets_at_epoch>" line per model-scoped window.
+model_windows() {
+    [[ -f "$USAGE_CACHE" ]] || return
+    (( now - $(file_mtime "$USAGE_CACHE") > USAGE_MAX_AGE )) && return
+    jq -r --argjson now "$now" '
+        .limits[]?
+        | select(.kind == "weekly_scoped" and .scope.model.display_name != null and .percent != null)
+        | ((.resets_at // "") | sub("\\.[0-9]+"; "") | sub("(\\+00:00|Z)$"; "Z")
+           | try fromdateiso8601 catch null) as $r
+        | select($r == null or $r > $now)
+        | [.scope.model.display_name, (.percent | floor), ($r // "")]
+        | @tsv' "$USAGE_CACHE" 2>/dev/null
+}
+
 display_cwd() {
     local p=$1
-    [[ -n "$HOME" && "$p" == "$HOME"* ]] && p="~${p#$HOME}"
+    [[ -n "$HOME" && "$p" == "$HOME"* ]] && p="~${p#"$HOME"}"
     printf '%s' "$p"
 }
 
@@ -151,6 +220,16 @@ git_status_line() {
 SEP=$'  \033[2m❯\033[0m  '   # dim chevron, major section break
 DOT=$' \033[2m·\033[0m '     # dim middle dot, in-section break
 
+# window_segment <label> <pct> [resets_at_epoch]
+window_segment() {
+    local label=$1 pct_int=${2%%.*} reset=${3:-} out
+    out=$(printf '%s %s %2d%%' "$label" "$(bar "$pct_int")" "$pct_int")
+    if [[ -n "$reset" ]]; then
+        out+=$(printf ' \033[2m· resets %s\033[0m' "$(human_duration $(( reset - now )))")
+    fi
+    printf '%s%s' "$SEP" "$out"
+}
+
 cwd_display=$(display_cwd "$cwd")
 
 vcs_segment=""
@@ -187,26 +266,18 @@ if [[ -n "$ctx_pct" ]]; then
     line1+=$(printf $'%s\033[2m%d%% [%s] (%s)\033[0m' "$DOT" "$ctx_int" "$size_label" "$cm")
 fi
 if [[ -n "$five_pct" ]]; then
-    five_int=${five_pct%%.*}
-    b=$(bar "$five_int")
-    line1+="${SEP}"
-    if [[ -n "$five_reset" ]]; then
-        d=$(human_duration $(( five_reset - now )))
-        line1+=$(printf $'\033[33m⏳\033[0m \033[2;33m5hr\033[0m %s %2d%% \033[2m· resets %s\033[0m' "$b" "$five_int" "$d")
-    else
-        line1+=$(printf $'\033[33m⏳\033[0m \033[2;33m5hr\033[0m %s %2d%%' "$b" "$five_int")
-    fi
+    line1+=$(window_segment $'\033[33m⏳\033[0m \033[2;33m5hr\033[0m' "$five_pct" "$five_reset")
 fi
 if [[ -n "$week_pct" ]]; then
-    week_int=${week_pct%%.*}
-    b=$(bar "$week_int")
-    line1+="${SEP}"
-    if [[ -n "$week_reset" ]]; then
-        d=$(human_duration $(( week_reset - now )))
-        line1+=$(printf $'\033[34m7d\033[0m %s %2d%% \033[2m· resets %s\033[0m' "$b" "$week_int" "$d")
-    else
-        line1+=$(printf $'\033[34m7d\033[0m %s %2d%%' "$b" "$week_int")
-    fi
+    line1+=$(window_segment $'\033[34m7d\033[0m' "$week_pct" "$week_reset")
+fi
+# Model windows only apply to plan-limited sessions; rate_limits marks those.
+if [[ "$has_rate_limits" == "true" ]]; then
+    maybe_refresh_usage
+    while IFS=$'\t' read -r m_name m_pct m_reset; do
+        [[ -z "$m_name" ]] && continue
+        line1+=$(window_segment $'\033[35m'"$m_name"$'\033[0m' "$m_pct" "$m_reset")
+    done < <(model_windows)
 fi
 printf '%s\n' "$line1"
 

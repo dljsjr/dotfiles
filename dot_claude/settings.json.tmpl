@@ -28,6 +28,16 @@
             "command": "{{- .chezmoi.homeDir -}}/.claude/hooks/bootstrap.py"
           }
         ]
+      },
+      {
+        "matcher": "^(startup|resume|clear|compact|fork)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '{{- .chezmoi.homeDir -}}/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -81,7 +91,8 @@
     "i-have-adhd@i-have-adhd": true,
     "tui-art@dljsjr": true,
     "obsidian@obsidian-skills": true,
-    "cc-plugin-you-should-know@builtin": true
+    "cc-plugin-you-should-know@builtin": true,
+    "cc-plugin-diff@builtin": true
   },
   "extraKnownMarketplaces": {
     "duckdb-skills": {
@@ -120,11 +131,11 @@
   "syntaxHighlightingDisabled": false,
   "effortLevel": "xhigh",
   "modelSettings": {
-    "claude-fable-5-1": {
-      "effortLevel": "xhigh"
+    "claude-fable-5-2": {
+      "effortLevel": "high"
     },
     "claude-opus-5-5": {
-      "effortLevel": "high"
+      "effortLevel": "xhigh"
     }
   },
   "tui": "fullscreen",
