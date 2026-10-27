@@ -17,7 +17,7 @@ Your automemories are also redirected to here instead of `~/.claude/project/*/me
 
 | Path                      | Purpose                                                                                                          |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `.sandpiper/standup.md`   | Session handoff note for continuity across agent sessions                                                        |
+| `.sandpiper/journal.md`  | Short continuation entries managed by the optional Journal skill                                                |
 | `.sandpiper/tasks/`       | Trail data. Load the `tasks` skill for more info.                                                                |
 | `.sandpiper/playbooks/`   | Project-specific operational guidance for agents                                                                 |
 | `.sandpiper/docs/`        | Active internal docs that follow Diátaxis, such as in-flight specs, PRDs, design notes, and implementation plans |
@@ -28,6 +28,8 @@ Your automemories are also redirected to here instead of `~/.claude/project/*/me
 | `.sandpiper/claude-code/` | Claude Code owned area (e.g. automemories)                                                                       |
 
 Not all projects need or will have every directory.
+
+If Journal is installed, load its skill and run its resolved absolute `scripts/journal` executable directly. Use `--dir <absolute-project-path>/.sandpiper` for reads and writes unless `AGENT_JOURNAL_DIR` already selects that directory. Do not assume a global `journal` binary exists. Read on resume and publish short entries as meaningful developments occur. Preserve saved historical notes.
 
 ### Global `~/.sandpiper`
 
