@@ -17,7 +17,7 @@ Your automemories are also redirected to here instead of `~/.claude/project/*/me
 
 | Path                      | Purpose                                                                                                          |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `.sandpiper/journal.md`  | Short continuation entries managed by the optional Journal skill                                                |
+| `.sandpiper/journal.md`   | Short continuation entries managed by the optional Journal skill                                                 |
 | `.sandpiper/tasks/`       | Trail data. Load the `tasks` skill for more info.                                                                |
 | `.sandpiper/playbooks/`   | Project-specific operational guidance for agents                                                                 |
 | `.sandpiper/docs/`        | Active internal docs that follow Diátaxis, such as in-flight specs, PRDs, design notes, and implementation plans |
@@ -35,16 +35,16 @@ If Journal is installed, load its skill and run its resolved absolute `scripts/j
 
 Mostly unused by Claude, but there are two useful items in the global dir for you.
 
-| Path                               | Purpose                                                                                         |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `~/.sandpiper/agent/inbox/`        | Cross-project handoff notes for agents                                                          |
-| `~/.sandpiper/agent/playbooks/`    | Home of global operational guidance that is loaded on demand                                    |
-| `~/.sandpiper/agent/roles/`        | Home of global operational guidance loaded on demand that is tailored to specific types of work |
-| `~/.sandpiper/agent/projects.md`   | Markdown routing table for locally cloned projects. Read it directly.                            |
+| Path                             | Purpose                                                                                         |
+| -------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `~/.sandpiper/agent/inbox/`      | Cross-project handoff notes for agents                                                          |
+| `~/.sandpiper/agent/playbooks/`  | Home of global operational guidance that is loaded on demand                                    |
+| `~/.sandpiper/agent/roles/`      | Home of global operational guidance loaded on demand that is tailored to specific types of work |
+| `~/.sandpiper/agent/projects.md` | Markdown routing table for locally cloned projects. Read it directly.                           |
 
 ## Prefer `jj` over `git`
 
-- Before running `git` commands, check if the target repository is a `jj` repo first. If it is, load the `jj` skill and use `jj` commands, not `git`.
+- Before running `git` commands, check if the target repository is a `jj` repo first. If it is, use `jj` commands, not `git`. Load an installed `jj` skill when available; otherwise consult `~/.sandpiper/agent/playbooks/workflow/version_control.md` and current CLI help.
 - When creating new Git repositories, use `jj git init --colocate` on them.
 - When cloning existing Git repositories, use `jj git init --colocate` after cloning them.
 
