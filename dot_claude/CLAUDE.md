@@ -40,7 +40,7 @@ Mostly unused by Claude, but there are two useful items in the global dir for yo
 | `~/.sandpiper/agent/inbox/`        | Cross-project handoff notes for agents                                                          |
 | `~/.sandpiper/agent/playbooks/`    | Home of global operational guidance that is loaded on demand                                    |
 | `~/.sandpiper/agent/roles/`        | Home of global operational guidance loaded on demand that is tailored to specific types of work |
-| `~/.sandpiper/agent/projects.toon` | Registry of locally cloned projects.                                                            |
+| `~/.sandpiper/agent/projects.md`   | Markdown routing table for locally cloned projects. Read it directly.                            |
 
 ## Prefer `jj` over `git`
 
