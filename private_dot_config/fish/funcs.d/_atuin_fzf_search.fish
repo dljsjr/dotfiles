@@ -8,8 +8,9 @@ function _atuin_fzf_search
     and set filter_mode $_flag_filter_mode
 
     set -lx PARENT_ATUIN_SESSION $ATUIN_SESSION
+    set -lx _ATUIN_FZF_FORMAT_DEFINITION (functions _atuin_fzf_format | string collect)
     set -f commands_selected (_atuin_fzf_format --reverse --filter-mode $filter_mode $argv |
-        _fzf_wrapper --with-shell "$(command --search fish) --no-config --command" \
+        _fzf_wrapper --with-shell "$(command --search fish) --no-config --init-command 'eval \"\$_ATUIN_FZF_FORMAT_DEFINITION\"' --command" \
             --read0 \
             --print0 \
             --multi \

@@ -9,6 +9,7 @@ brew "atuin" unless which("atuin", ORIGINAL_PATHS)
 brew "bat"
 brew "bottom"
 brew "cargo-binstall" if which("cargo", ORIGINAL_PATHS)
+brew "cargo-nextest" unless which("cargo-nextest", ORIGINAL_PATHS)
 brew "chezmoi" unless which("chezmoi", ORIGINAL_PATHS)
 brew "dasel"
 brew "difftastic"

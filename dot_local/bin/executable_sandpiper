@@ -24,4 +24,4 @@ if [ "$(basename "$0")" = "@sandpiper" ]; then
     exec mise exec bun -- bun run --bun $HOME/git/sandpiper-ai/packages/cli/sandpiper_standalone.ts -- "$@" "$extra_args"
 fi
 
-exec mise exec bun -- bun run --bun $HOME/git/sandpiper-ai/node_modules/.bin/sandpiper "$@" "$extra_args"
+exec mise exec bun -- bun run --bun $HOME/git/sandpiper-ai/packages/cli/bin/sandpiper "$@" "$extra_args"

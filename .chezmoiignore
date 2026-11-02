@@ -81,6 +81,9 @@ Brewfile
 .config/gcloud
 .config/gws
 .config/herdr*
+!.config/herdr-app
+.config/herdr-app/**
+!.config/herdr-app/settings.json
 .config/hike
 .config/htop
 .config/jj/repos
@@ -105,6 +108,7 @@ Brewfile
 .local/lib
 .local/pipx
 .local/share
+.local/state/herdr-core
 
 .ssh/agent
 .ssh/config.d/99-local.conf
