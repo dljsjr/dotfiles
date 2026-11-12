@@ -11,6 +11,7 @@
   "trustedformulae": [
     "lightpanda-io/browser/lightpanda",
     "macos-fuse-t/cask/sshfs-fuse-t",
+    "umputun/apps/revdiff",
     "ttscoff/thelab/mk"
   ],
   "trustedcasks": [

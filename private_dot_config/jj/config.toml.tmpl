@@ -27,7 +27,6 @@ subprocess = true
 colocate = true
 push = "origin"
 private-commits = "description(regex:'^wip[:]?.*') | description(regex:'^private[:]?.*') | description(regex:'^(?:mega)?merge[:]?.*')"
-sign-on-push = true
 
 [merge-tools.hunk]
 program = "nvim"
@@ -38,6 +37,9 @@ edit-args = ["-c", "DiffEditor $left $right $output"]
 "parent_bookmark(to)" = "heads(::to & bookmarks())"
 "parent_bookmark()" = "parent_bookmark(@)"
 "bookmark_children()" = "parent_bookmark()..@"
+
+[revsets]
+git-sign-on-push = "~signed() & mine()"
 
 [signing]
 behavior = "drop"
