@@ -121,8 +121,6 @@ Brewfile
 !.claude/hooks/**/*
 !.claude/plugins/
 !.claude/plugins/blocklist.json
-!.claude/plugins/installed_plugins.json
-!.claude/plugins/known_marketplaces.json
 !.claude/rules/
 !.claude/rules/*
 !.claude/rules/**/*
