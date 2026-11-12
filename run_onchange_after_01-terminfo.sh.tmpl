@@ -1,37 +1,34 @@
 #!/usr/bin/env sh
-printf "updating terminfo symlinks\n"
-{{ $terminfoRoot :=  joinPath .chezmoi.homeDir ".terminfo" }}
-{{ $terminfoFiles := joinPath $terminfoRoot "**" "*" -}}
-{{ range $terminfo := glob $terminfoFiles -}}
-{{ if eq (lstat $terminfo).type "dir" -}}
-## dir: {{ $terminfo }}, last modified: {{ (lstat $terminfo).modTime }}
+# Compile the sources in terminfo/ into ~/.terminfo with this host's tic, so
+# each machine gets its native layout (hex dirs on macOS, letter dirs on Linux).
+{{ range (glob (joinPath .chezmoi.sourceDir "terminfo" "*.terminfo")) -}}
+# {{ base . }} sha256: {{ include . | sha256sum }}
 {{ end -}}
-{{ if eq (lstat $terminfo).type "file" -}}
-## {{ $terminfo }} hash: {{ include $terminfo | sha256sum }}, last modified: {{ (lstat $terminfo).modTime }}
-{{ end -}}
-{{ end -}}
-# newline-delimited on purpose: `read -d ''` is a bashism (dash rejects it),
-# and terminfo paths never contain newlines.
-find {{ $terminfoRoot }} | while IFS= read -r maybeDir
-do
-    if [ -L "$maybeDir" ] && [ ! -e "$maybeDir" ]
-    then
-        printf "pruning broken symlink [%s]\n" "$maybeDir"
-        rm "$maybeDir"
+set -eu
+
+if ! command -v tic >/dev/null 2>&1; then
+    printf 'tic not found; skipping terminfo install\n' >&2
+    exit 0
+fi
+
+dest="$HOME/.terminfo"
+mkdir -p "$dest"
+
+# Earlier versions shipped prebuilt entries in letter dirs and pointed hex
+# dirs at them with symlinks. Remove the symlinks so tic writes real dirs.
+for entry in "$dest"/[0-9a-f][0-9a-f]; do
+    if [ -L "$entry" ]; then
+        rm "$entry"
     fi
-    if [ ! -L "$maybeDir" ] && [ -d "$maybeDir" ]
-    then
-        case "$maybeDir" in
-            {{ $terminfoRoot }}/[[:lower:]])
-                CHAR="$(basename "$maybeDir")"
-                HEX="$(printf "%x" "'$CHAR")"
-                SYMLINK="{{ joinPath .chezmoi.homeDir ".terminfo" }}/$HEX"
-                if [ ! -L "$SYMLINK" ] && [ ! -e "$SYMLINK" ]
-                then
-                    printf "creating terminfo symlink from %s to %s\n" "$CHAR" "$HEX"
-                    ln -s "$maybeDir" "$SYMLINK"
-                fi
-                ;;
-        esac
-    fi
+done
+{{- if eq .chezmoi.os "darwin" }}
+
+# tic writes hex dirs here, so the old letter-dir copies would only shadow
+# or duplicate the fresh entries.
+rm -f "$dest/w/wezterm" "$dest/x/xterm-ghostty" "$dest/x/xterm-kitty"
+rmdir "$dest/w" "$dest/x" 2>/dev/null || true
+{{- end }}
+
+for src in "{{ joinPath .chezmoi.sourceDir "terminfo" }}"/*.terminfo; do
+    tic -x -o "$dest" "$src"
 done

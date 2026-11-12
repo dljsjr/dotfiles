@@ -59,6 +59,7 @@ Brewfile
 .streamlit
 .superset
 .swiftpm
+.terminfo
 .viminfo
 .vscode
 .vscode-shared
@@ -143,17 +144,12 @@ Brewfile
 {{- end }}
 {{- end -}}
 {{- end }}
-{{ range $terminfo := glob (joinPath .chezmoi.homeDir ".terminfo" "**" "*") -}}
-{{- if and (eq (lstat $terminfo).type "symlink") (eq (stat $terminfo).type "dir") }}
-{{ trimPrefix (printf "%s/" $.chezmoi.homeDir) $terminfo }}
-{{ trimPrefix (printf "%s/" $.chezmoi.homeDir) $terminfo }}/**/*
-{{- end }}
-{{- end }}
 
 darwin/
 bin/
+terminfo/
 
-{{- $osIgnoreFile := (print "." .chezmoi.os "ignore") -}}
+{{ $osIgnoreFile := (print "." .chezmoi.os "ignore") -}}
 {{- $stat := lstat $osIgnoreFile -}}
 {{- if and $stat (eq $stat.type "file") -}}
 {{ includeTemplate $osIgnoreFile }}
