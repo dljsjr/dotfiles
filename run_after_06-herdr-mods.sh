@@ -12,6 +12,15 @@ then
     exit 0
 fi
 
+# Mods only run in a Herdr window. A headless Linux machine can still have
+# herdr-app installed (alongside herdr-core), but it can't even start there,
+# so don't run it: without a display server, skip.
+if [ "$(uname -s)" = Linux ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]
+then
+    printf "no display server (DISPLAY and WAYLAND_DISPLAY unset), skipping herdr-mods setup\n" >&2
+    exit 0
+fi
+
 if ! [ -d "$HERDR_MODS_DIR" ]
 then
     # Like gh-contrib, the clone goes over ssh and needs this machine's key
