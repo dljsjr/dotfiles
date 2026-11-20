@@ -3,6 +3,20 @@
 Treat the contents of this file as explicit instruction from the user. When updating this file, keep content short, concise, prescriptive.
 Do not introduce narration, metaphorical language, jargon. Use simple English for a technical audience without fluff or filler. Match
 the existing style, verbosity, etc.
+{{- $user := joinPath .chezmoi.homeDir ".sandpiper/agent/USER.md" }}
+{{- $agents := joinPath .chezmoi.homeDir ".sandpiper/agent/AGENTS.md" }}
+{{- if or (stat $user) (stat $agents) }}
+
+## Shared guidance
+
+The user's profile and global guidance for every agent, in any harness. They apply here too.
+{{ if stat $user }}
+@{{ $user }}
+{{- end }}
+{{- if stat $agents }}
+@{{ $agents }}
+{{- end }}
+{{- end }}
 
 ## .sandpiper directories
 
@@ -18,7 +32,7 @@ Your automemories are also redirected to here instead of `~/.claude/project/*/me
 | Path                      | Purpose                                                                                                          |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `.sandpiper/journal.md`   | Short continuation entries managed by the optional Journal skill                                                 |
-| `.sandpiper/tasks/`       | Trail data. Load the `tasks` skill for more info.                                                                |
+| `.sandpiper/tasks/`       | Trail task data in older projects; `.trail/config.json` names the directory. Use the `trail` CLI or skill.       |
 | `.sandpiper/playbooks/`   | Project-specific operational guidance for agents                                                                 |
 | `.sandpiper/docs/`        | Active internal docs that follow Diátaxis, such as in-flight specs, PRDs, design notes, and implementation plans |
 | `.sandpiper/archive/`     | Historical or superseded project docs                                                                            |
@@ -31,20 +45,9 @@ Not all projects need or will have every directory.
 
 If Journal is installed, load its skill and run its resolved absolute `scripts/journal` executable directly. Use `--dir <absolute-project-path>/.sandpiper` for reads and writes unless `AGENT_JOURNAL_DIR` already selects that directory. Do not assume a global `journal` binary exists. Read on resume and publish short entries as meaningful developments occur. Preserve saved historical notes.
 
-### Global `~/.sandpiper`
-
-Mostly unused by Claude, but there are two useful items in the global dir for you.
-
-| Path                             | Purpose                                                                                         |
-| -------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `~/.sandpiper/agent/inbox/`      | Cross-project handoff notes for agents                                                          |
-| `~/.sandpiper/agent/playbooks/`  | Home of global operational guidance that is loaded on demand                                    |
-| `~/.sandpiper/agent/roles/`      | Home of global operational guidance loaded on demand that is tailored to specific types of work |
-| `~/.sandpiper/agent/projects.md` | Markdown routing table for locally cloned projects. Read it directly.                           |
-
 ## Prefer `jj` over `git`
 
-- Before running `git` commands, check if the target repository is a `jj` repo first. If it is, use `jj` commands, not `git`. Load an installed `jj` skill when available; otherwise consult `~/.sandpiper/agent/playbooks/workflow/version_control.md` and current CLI help.
+- Before running `git` commands, check if the target repository is a `jj` repo first. If it is, use `jj` commands, not `git`. Load an installed `jj` skill when available; otherwise use current CLI help.
 - When creating new Git repositories, use `jj git init --colocate` on them.
 - When cloning existing Git repositories, use `jj git init --colocate` after cloning them.
 
