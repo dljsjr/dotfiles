@@ -114,17 +114,23 @@ file_mtime() {
 }
 
 # Prints CC's claude.ai OAuth access token, or nothing if absent or expired.
+# CC keeps its login in the macOS keychain, or in .credentials.json when it
+# cannot use the keychain. The one it stopped using goes stale, so read both
+# and take the token that expires last.
 oauth_token() {
-    local creds
+    local now_ms creds keychain_creds="" file_creds best
+    now_ms=$(( $(date +%s) * 1000 ))
     if [[ "$(uname -s)" == Darwin ]]; then
-        creds=$(security find-generic-password -a "$USER" -w -s "Claude Code-credentials" 2>/dev/null)
-    else
-        creds=$(cat "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.credentials.json" 2>/dev/null)
+        keychain_creds=$(security find-generic-password -a "$USER" -w -s "Claude Code-credentials" 2>/dev/null)
     fi
-    jq -r --argjson now_ms "$(( $(date +%s) * 1000 ))" '
-        .claudeAiOauth // empty
-        | select(.accessToken and (.expiresAt // 0) > $now_ms)
-        | .accessToken' <<<"$creds" 2>/dev/null
+    file_creds=$(cat "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.credentials.json" 2>/dev/null)
+    best=$(for creds in "$keychain_creds" "$file_creds"; do
+        jq -r --argjson now_ms "$now_ms" '
+            .claudeAiOauth // empty
+            | select(.accessToken and (.expiresAt // 0) > $now_ms)
+            | "\(.expiresAt)\t\(.accessToken)"' <<<"$creds" 2>/dev/null
+    done | sort -n | tail -1)
+    [[ -n "$best" ]] && printf '%s' "${best#*$'\t'}"
 }
 
 refresh_usage_cache() {

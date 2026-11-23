@@ -22,6 +22,8 @@ dist/
 .sandpiper/
 .claude/
 .claude/settings.local.json
+**/.claude/settings.local.json
+
 AGENTS*.md
 GEMINI*.md
 CLAUDE*.md
