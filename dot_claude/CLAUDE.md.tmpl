@@ -67,28 +67,3 @@ Examples:
 Examples:
 
 - Use `glab` or `gh` instead of web fetching when working with GitLab/GitHub if they're available
-- Use `jira` instead of the built-in Atlassian MCP server if it's available
-
-## Verify scripts before running or handing off
-
-Examples:
-
-- Use `shellcheck` and `shfmt` for shell scripts
-- Use `ruff` and `ty` via `uvx` to check Python scripts
-
-## Use `uv` for Python projects; use `bun` for JavaScript/TypeScript projects
-
-Self-explanatory.
-
-## Prefer `mise` for managing coupled runtime/package ecosystems
-
-Examples:
-
-- Prefer project-local runtime and package management over global runtime and package management
-  - This also applies to executables unless global is absolutely required
-  - Use `.mise.local.toml` for projects that do not use `mise` natively
-  - Create the file with `touch .mise.local.toml && mise trust` to avoid permission failures
-- If global installation is necessary, use `mise use -g npm:...` instead of `npm -g` or the system package manager for global node executables
-  - This will use `bun` automatically if it's installed even though the packages are `npm` namespaced
-- If global installation is necessary, use `mise use -g pipx:...` instead of `pip`/`pipx` or the system package manager for global python executables
-  - This will use `uv`/`uvx` automatically even though the packages are `pipx` namespaced
